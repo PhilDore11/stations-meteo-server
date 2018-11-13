@@ -11,3 +11,4 @@ artifacts:
     - routes/**/*
     - bin/**/*
     - package.json
+    - .ebextensions/**/*
