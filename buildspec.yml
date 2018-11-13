@@ -6,6 +6,7 @@ phases:
       - npm install --production
 artifacts:
   files:
+    - app.js
     - routes/**/*
     - bin/**/*
     - package.json
