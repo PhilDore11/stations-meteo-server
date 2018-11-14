@@ -1,11 +1,13 @@
-var express = require('express');
-var router = express.Router();
+const moment = require('moment');
 
-var precipitationData = require('./precipitationData.json');
+const precipitationData = require('./precipitationData.json');
 
-/* GET users listing. */
-router.get('/', function(req, res, next) {
-  res.json(precipitationData);
-});
+module.exports = (req, res) => {
+  const { start, end } = req.query;
 
-module.exports = router;
+  const chartData = precipitationData.filter((data) =>
+    moment(data.date).isBetween(moment(start), moment(end))
+  );
+
+  res.json(chartData);
+};
