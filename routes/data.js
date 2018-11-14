@@ -1,13 +1,23 @@
 const moment = require('moment');
+const csv = require('csvtojson');
 
-const precipitationData = require('./precipitationData.json');
+// const precipitationData = require('./precipitationData.json');
 
 module.exports = (req, res) => {
   const { start, end } = req.query;
 
-  const chartData = precipitationData.filter((data) =>
-    moment(data.date).isBetween(moment(start), moment(end))
-  );
+  csv({
+    noheader:true,
+    headers: ['date','indicator', 'battery', 'intensity']
+  })
+    .fromFile(__dirname + '/precipitation.dat')
+    .then((jsonData) => {
+      console.log('jsonData', jsonData);
 
-  res.json(chartData);
+      const chartData = jsonData.filter((jsonData) =>
+        moment(jsonData.date).isBetween(moment(start), moment(end))
+      );
+
+      res.json(chartData);
+    });
 };
