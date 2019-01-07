@@ -12,8 +12,6 @@ module.exports = (req, res) => {
   })
     .fromFile(__dirname + '/precipitation.dat')
     .then((jsonData) => {
-      console.log('jsonData', jsonData);
-
       const chartData = jsonData.filter((jsonData) =>
         moment(jsonData.date).isBetween(moment(start), moment(end))
       );
