@@ -18,11 +18,25 @@ module.exports = {
         res.send(200);
       });
     },
+    put: (req, res, next) => {
+      connection.query('UPDATE clients SET ? WHERE id=?', [req.body, req.body.id], (err, results, fields) => {
+        if (err) return next(err);
+
+        res.send(200);
+      });
+    },
     get: (req, res, next) => {
       connection.query('SELECT * from clients', (err, results, fields) => {
         if (err) return next(err);
 
         res.json(results);
       });
-    }
+    },
+    delete: (req, res, next) => {
+      connection.query('DELETE from clients WHERE id=?', req.body.id, (err, results, fields) => {
+        if (err) return next(err);
+
+        res.send(200);
+      });
+    },
   }

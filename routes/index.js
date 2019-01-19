@@ -9,5 +9,7 @@ router.get('/data', data);
 clients.connect();
 router.get('/clients', clients.get);
 router.post('/clients', clients.post);
+router.put('/clients', clients.put);
+router.delete('/clients', clients.delete);
 
 module.exports = router;
