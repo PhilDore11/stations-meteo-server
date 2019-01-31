@@ -2,7 +2,7 @@ const db = require('./db');
 
 const _ = require('lodash');
 
-const clientGetQuery = "SELECT clients.id AS clientId, clients.name AS clientName, clients.email AS email, stations.id as stationId, stations.latitude AS latitude, stations.longitude AS longitude, stations.ipAddress AS ipAddress, stations.deviceType AS deviceType, stations.name AS stationName FROM clients JOIN stations ON stations.clientId = clients.id;"
+const clientGetQuery = "SELECT clients.id AS clientId, clients.name AS clientName, clients.email AS email, stations.id as stationId, stations.latitude AS latitude, stations.longitude AS longitude, stations.ipAddress AS ipAddress, stations.deviceType AS deviceType, stations.name AS stationName FROM clients JOIN stations ON stations.clientId = clients.id WHERE clients.id IN (?);"
 
 module.exports = {
   post: (req, res, next) => {
@@ -20,7 +20,7 @@ module.exports = {
     });
   },
   get: (req, res, next) => {
-    db.connection.query(clientGetQuery, (err, results) => {
+    db.connection.query(clientGetQuery, [req.query.id], (err, results) => {
       if (err) return next(err);
 
       let clientResults = []
