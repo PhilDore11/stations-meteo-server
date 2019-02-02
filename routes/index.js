@@ -17,7 +17,7 @@ router.post('/clients', clients.post);
 router.put('/clients', clients.put);
 router.delete('/clients', clients.delete);
 
-const stations = require('./stations');
-router.get('/stations/:clientId', stations.get);
+const stationData = require('./stationData');
+router.get('/stationData/:clientId', stationData.get);
 
 module.exports = router;

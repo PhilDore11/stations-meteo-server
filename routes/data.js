@@ -1,8 +1,6 @@
 const moment = require('moment');
 const csv = require('csvtojson');
 
-// const precipitationData = require('./precipitationData.json');
-
 module.exports = (req, res) => {
   const { start, end } = req.query;
 
