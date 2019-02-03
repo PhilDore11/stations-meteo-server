@@ -14,8 +14,8 @@ router.post('/login', auth.login);
 const clients = require('./clients');
 router.get('/clients', clients.get);
 router.post('/clients', clients.post);
-router.put('/clients', clients.put);
-router.delete('/clients', clients.delete);
+router.put('/clients/:clientId', clients.put);
+router.delete('/clients/:clientId', clients.delete);
 
 const stationData = require('./stationData');
 router.get('/stationData/:clientId', stationData.get);

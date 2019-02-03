@@ -7,21 +7,24 @@ const clientGetQuery = "SELECT clients.id AS clientId, clients.name AS clientNam
 module.exports = {
   post: (req, res, next) => {
     db.connection.query('INSERT INTO clients SET ?', req.body, (err) => {
-      if (err) return next(err);
+      if (err) return next(err.sqlMessage);
 
-      res.send(200);
+      res.status(200).send({});
     });
   },
   put: (req, res, next) => {
-    db.connection.query('UPDATE clients SET ? WHERE id=?', [req.body, req.body.id], (err) => {
-      if (err) return next(err);
+    const { clientId } = req.params;
+    const clientData = _.omit(req.body, 'stations');
+    console.log('clientData', clientData);
+    db.connection.query(`UPDATE clients SET ? WHERE id=${clientId}`, clientData, (err) => {
+      if (err) return next(err.sqlMessage);
 
-      res.send(200);
+      res.status(200).send({});
     });
   },
   get: (req, res, next) => {
     db.connection.query(clientGetQuery, [req.query.id], (err, results) => {
-      if (err) return next(err);
+      if (err) return next(err.sqlMessage);
 
       let clientResults = []
       _.each(results, (result) => {
@@ -52,10 +55,11 @@ module.exports = {
     });
   },
   delete: (req, res, next) => {
-    db.connection.query( 'DELETE from clients WHERE id=?', req.body.id, (err) => {
-      if (err) return next(err);
+    const { clientId } = req.params;
+    db.connection.query( 'DELETE from clients WHERE id=?', clientId, (err) => {
+      if (err) return next(err.sqlMessage);
 
-      res.send(200);
+      res.status(200).send({});
     });
   },
 }

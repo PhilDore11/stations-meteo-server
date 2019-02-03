@@ -7,8 +7,8 @@ const loginQuery = 'SELECT * FROM userClients JOIN users ON users.id = userClien
 module.exports = {
   login: (req, res, next) => {
     db.connection.query(loginQuery, [req.body.username, req.body.password], (err, results) => {
-      if (err) return next(err);
-      if (_.isEmpty(results)) return res.send(500);
+      if (err) return next(err.sqlMessage);
+      if (_.isEmpty(results)) return next('User Not Found.');
 
       const user = _.omit(results[0], 'password', 'clientId');
       user.clients = results.map((res) => ({
