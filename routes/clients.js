@@ -54,6 +54,14 @@ module.exports = {
       res.json(clientResults);
     });
   },
+  getStations: (req, res, next) => {
+    const { clientId } = req.params;
+    db.connection.query( 'SELECT * FROM stations WHERE clientId=?', clientId, (err, results) => {
+      if (err) return next(err.sqlMessage);
+
+      res.json(results);
+    });
+  },
   delete: (req, res, next) => {
     const { clientId } = req.params;
     db.connection.query( 'DELETE from clients WHERE id=?', clientId, (err) => {
