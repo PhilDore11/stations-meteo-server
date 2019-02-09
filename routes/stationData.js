@@ -20,8 +20,10 @@ module.exports = {
       groupByClauses = ['YEAR(date)', 'MONTH(date)', 'DAY(date)'];
     }
 
+    const query = getQuery + ' GROUP BY ' + groupByClauses.join(', ');
+
     db.connection.query(
-      getQuery + ' GROUP BY ' + groupByClauses.join(', '),
+      query,
       [
         parseInt(clientId),
         moment(start).format(constants.MYSQL_DATETIME_FORMAT),
