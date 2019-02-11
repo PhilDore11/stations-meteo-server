@@ -19,9 +19,10 @@ router.delete('/clients/:clientId', clients.delete);
 router.get('/clients/:clientId/stations', clients.getStations);
 
 const stationData = require('./stationData');
-router.get('/stationData/:clientId', stationData.get);
+router.get('/stationData/:stationId', stationData.get);
 
 const idfData = require('./idfData');
-router.get('/idfData/:clientId', idfData.get);
+router.get('/idfData/:stationId', idfData.get);
+router.get('/idfData/:stationId/stationdata', idfData.getStationData);
 
 module.exports = router;

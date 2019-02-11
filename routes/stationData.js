@@ -3,12 +3,20 @@ const moment = require('moment');
 const db = require('./db');
 const constants = require('./constants');
 
-const getQuery =
-  'SELECT MIN(stationData.date) as date, SUM(stationData.intensity) as intensity FROM stationData JOIN stations ON stationData.stationId = stations.stationId JOIN clients ON stations.clientId = clients.id WHERE clients.id = ? AND (stationData.date BETWEEN ? AND ?)';
+const getQuery = `
+  SELECT 
+    MIN(stationData.date) as date, 
+    SUM(stationData.intensity) as intensity 
+  FROM 
+    stationData 
+  WHERE 
+    stationId = ? AND 
+    (stationData.date BETWEEN ? AND ?)
+`;
 
 module.exports = {
   get: (req, res, next) => {
-    const { clientId } = req.params;
+    const { stationId } = req.params;
     const { start, end, view } = req.query;
 
     let groupByClauses = [];
@@ -25,7 +33,7 @@ module.exports = {
     db.connection.query(
       query,
       [
-        parseInt(clientId),
+        stationId,
         moment(start).format(constants.MYSQL_DATETIME_FORMAT),
         moment(end).format(constants.MYSQL_DATETIME_FORMAT),
       ],
