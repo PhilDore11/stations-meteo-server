@@ -23,6 +23,5 @@ router.get('/stationData/:stationId', stationData.get);
 
 const idfData = require('./idfData');
 router.get('/idfData/:stationId', idfData.get);
-router.get('/idfData/:stationId/stationdata', idfData.getStationData);
 
 module.exports = router;
