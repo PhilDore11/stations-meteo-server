@@ -15,7 +15,6 @@ module.exports = {
   put: (req, res, next) => {
     const { clientId } = req.params;
     const clientData = _.omit(req.body, 'stations');
-    console.log('clientData', clientData);
     db.connection.query(`UPDATE clients SET ? WHERE id=${clientId}`, clientData, (err) => {
       if (err) return next(err.sqlMessage);
 
