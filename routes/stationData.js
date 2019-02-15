@@ -6,11 +6,15 @@ const constants = require('./constants');
 const getQuery = `
   SELECT 
     MIN(stationData.date) as date, 
-    SUM(stationData.intensity) as intensity 
+    SUM(stationData.intensity) / 0.1 * stations.coefficient as intensity 
   FROM 
-    stationData 
+    stationData
+  JOIN
+    stations
+  ON
+    stationData.stationId = stations.stationId
   WHERE 
-    stationId = ? AND 
+    stationData.stationId = ? AND 
     (stationData.date BETWEEN ? AND ?)
 `;
 
