@@ -20,6 +20,7 @@ router.get('/clients/:clientId/stations', clients.getStations);
 
 const stationData = require('./stationData');
 router.get('/stationData/:stationId', stationData.get);
+router.get('/stationData/:stationId/latest', stationData.getLatest);
 
 const idfData = require('./idfData');
 router.get('/idfData/:stationId', idfData.get);

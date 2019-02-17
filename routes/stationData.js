@@ -18,6 +18,17 @@ const getQuery = `
     (stationData.date BETWEEN ? AND ?)
 `;
 
+const getLatestQuery = `
+  SELECT
+    *
+  FROM
+    stationData
+  WHERE 
+    stationData.stationId = ?
+  ORDER BY date
+  LIMIT 1;
+`;
+
 module.exports = {
   get: (req, res, next) => {
     const { stationId } = req.params;
@@ -47,5 +58,14 @@ module.exports = {
         res.json(results);
       },
     );
+  },
+  getLatest: (req, res, next) => {
+    const { stationId } = req.params;
+
+    db.connection.query(getLatestQuery, [stationId], (err, results) => {
+      if (err) return next(err.sqlMessage);
+
+      res.json(results[0] || {});
+    });
   },
 };
