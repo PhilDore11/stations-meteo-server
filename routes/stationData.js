@@ -20,12 +20,17 @@ const getQuery = `
 
 const getLatestQuery = `
   SELECT
-    *
+    stationData.battery,
+    stationData.intensity / 0.1 * stations.coefficient as intensity
   FROM
     stationData
+  JOIN
+    stations
+  ON
+    stationData.stationId = stations.stationId
   WHERE 
     stationData.stationId = ?
-  ORDER BY date
+  ORDER BY date DESC
   LIMIT 1;
 `;
 
