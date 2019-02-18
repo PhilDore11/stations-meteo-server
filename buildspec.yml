@@ -9,6 +9,7 @@ artifacts:
     - app.js
     - node_modules/**/*
     - routes/**/*
+    - utils/**/*
     - bin/**/*
     - package.json
     - .ebextensions/**/*
