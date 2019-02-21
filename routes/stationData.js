@@ -20,6 +20,7 @@ const getQuery = `
 
 const getLatestQuery = `
   SELECT
+    stationData.date,
     stationData.battery,
     stationData.intensity / 0.1 * stations.coefficient as intensity
   FROM
