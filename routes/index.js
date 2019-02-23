@@ -26,8 +26,8 @@ const idfData = require('./idfData');
 router.get('/idfData/:stationId', idfData.get);
 router.get('/idfData/:stationId/stationData', idfData.getStationData);
 
-const crons = require('./crons');
-crons.startInsertCron();
-crons.startAlertsCron();
+// const crons = require('./crons');
+// crons.startInsertCron();
+// crons.startAlertsCron();
 
 module.exports = router;
