@@ -64,8 +64,8 @@ const startInsertCron = () => {
       indicator: indicator++,
       stationId: 'TST1',
       date: moment().format(constants.MYSQL_DATETIME_FORMAT),
-      battery: 12 - Math.random() * 10,
-      intensity: Math.random() > 0.8 ? Math.random() * 2 : 0,
+      battery: 12 - Math.random() * 5,
+      intensity: Math.random() > 0.7 ? Math.random() * 2 : 0,
     };
 
     const insertResult = await db.connection.query('INSERT INTO stationData SET ?', newRow);

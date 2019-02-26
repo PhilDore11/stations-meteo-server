@@ -2,12 +2,30 @@ const db = require('./db');
 
 const _ = require('lodash');
 
+const getClientsQuery = `
+  SELECT 
+    clients.*,
+    users.id as userId,
+    users.username,
+    users.password
+  FROM 
+    clients 
+  LEFT JOIN
+    userClients ON clients.id = userClients.clientId AND userId != 1
+  LEFT JOIN
+    users ON userClients.userId = users.id
+  WHERE
+    clients.id IN (?)
+`;
+
 module.exports = {
   post: (req, res, next) => {
-    db.connection.query('INSERT INTO clients SET ?', req.body, err => {
-      if (err) return next(err.sqlMessage);
+    const { name } = req.body;
 
-      res.status(200).send({});
+    db.connection.query('INSERT INTO clients (name) VALUES (?)', [name], (clientsErr, results) => {
+      if (clientsErr) return next(clientsErr.sqlMessage);
+
+      res.status(200).send(results);
     });
   },
   put: (req, res, next) => {
@@ -20,7 +38,7 @@ module.exports = {
     });
   },
   get: (req, res, next) => {
-    db.connection.query('SELECT * FROM clients WHERE clients.id IN (?)', [req.query.id], (err, results) => {
+    db.connection.query(getClientsQuery, [req.query.id], (err, results) => {
       if (err) return next(err.sqlMessage);
 
       res.json(results);
