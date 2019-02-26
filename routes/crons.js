@@ -91,6 +91,8 @@ const startAlertsCron = async () => {
       _.each(groupedResults, async (stationData, stationId) => {
         const stationClientResults = await db.connection.query(getStationClient, [stationId]);
         const client = stationClientResults[0];
+        const clientAlerts = await db.connection.query('SELECT * FROM clientAlerts WHERE clientId=?', [client.id]);
+
         const referenceStationResults = await db.connection.query(getReferenceStationQuery, [stationId]);
         [5, 10, 15, 30, 60, 120, 360, 720, 1440].map(async increment => {
           const intensity = _.reduce(
@@ -100,12 +102,15 @@ const startAlertsCron = async () => {
           );
           let index = 0;
           let referenceData = referenceStationResults[index++];
+
+          const rainAlertEmails = clientAlerts.filter(alert => alert.hasRain === 1);
+
           while (index <= referenceStationResults.length && intensity > referenceData[increment]) {
             const formattedInterval = moment.duration(increment, 'minutes').humanize();
             console.log(`Hit threshold for ${formattedInterval} - ${intensity}`);
             const mailOptions = {
               from: 'alertes@jfsa.test.com',
-              to: client.email,
+              to: rainAlertEmails,
               subject: `${client.name} - Alerte de pluie - ${moment().format('lll')}`,
               text: `Une précipitation importante a été enregistrée lors des derniers ${formattedInterval}`,
             };
