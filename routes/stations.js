@@ -67,7 +67,6 @@ module.exports = {
   delete: (req, res, next) => {
     const { stationId } = req.params;
 
-    console.log("STATION DELETE", stationId);
     db.connection.query(
       "DELETE from stations WHERE id=?",
       [stationId],
