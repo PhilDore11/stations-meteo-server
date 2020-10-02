@@ -31,6 +31,7 @@ router.delete('/userClients', userClients.delete);
 const alerts = require('./alerts');
 router.get('/alerts/:clientId', alerts.get);
 router.post('/alerts/:clientId', alerts.post);
+router.delete('/alerts/:clientId', alerts.delete);
 
 const stationData = require('./stationData');
 router.get('/stationData/:stationId', stationData.get);

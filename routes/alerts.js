@@ -38,4 +38,13 @@ module.exports = {
       res.json({});
     });
   },
+  delete: (req, res, next) => {
+    const { clientId } = req.params;
+
+    db.connection.query('DELETE FROM clientAlerts WHERE clientId=?', clientId, err => {
+      if (err) return next(err.sqlMessage);
+
+      res.json({});
+    });
+  },
 };
