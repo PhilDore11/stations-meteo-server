@@ -24,6 +24,7 @@ router.put('/users/:userId', users.put);
 router.delete('/users/:userId', users.delete);
 
 const userClients = require('./userClients');
+router.get('/userClients/:clientId', userClients.get);
 router.post('/userClients', userClients.post);
 router.delete('/userClients', userClients.delete);
 
@@ -38,6 +39,14 @@ router.get('/stationData/:stationId/latest', stationData.getLatest);
 const idfData = require('./idfData');
 router.get('/idfData/:stationId', idfData.get);
 router.get('/idfData/:stationId/stationData', idfData.getStationData);
+
+const stations = require('./stations');
+router.post('/stations', stations.post);
+router.put('/stations/:stationId', stations.put);
+router.delete('/stations/:stationId', stations.delete);
+
+const referenceStations = require('./referenceStations');
+router.get('/referenceStations', referenceStations.get);
 
 const crons = require('./crons');
 // crons.startInsertCron();
