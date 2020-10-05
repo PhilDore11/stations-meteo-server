@@ -67,7 +67,20 @@ module.exports = {
   getStations: (req, res, next) => {
     const { clientId } = req.params;
     db.connection.query(
-      "SELECT * FROM stations WHERE clientId=?",
+      ` SELECT stations.*, 
+        coefficients.coefficient 
+        FROM   stations 
+               JOIN(SELECT stationCoefficients.* 
+                    FROM   stationCoefficients 
+                           INNER JOIN (SELECT stationId, 
+                                              Max(date) AS date 
+                                       FROM   stationCoefficients 
+                                       GROUP  BY stationId) AS max 
+                                   ON ( stationCoefficients.stationId = max.stationId 
+                                        AND stationCoefficients.date = max.date )) AS 
+                                   coefficients 
+                 ON ( stations.id = coefficients.stationId ) 
+        WHERE  clientid = ?;`,
       clientId,
       (err, results) => {
         if (err) return next(err.sqlMessage);

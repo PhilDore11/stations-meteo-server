@@ -7,7 +7,6 @@ module.exports = {
       stationId,
       name,
       referenceStationId,
-      coefficient,
       latitude,
       longitude,
       ipAddress,
@@ -24,13 +23,12 @@ module.exports = {
     } = req.body;
 
     db.connection.query(
-      "INSERT INTO stations (clientId, stationId, name, referenceStationId, coefficient, latitude, longitude, ipAddress, deviceType, hasRain, hasSnow, hasWind, hasHydro, localisation, address, city, province, postalCode) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+      "INSERT INTO stations (clientId, stationId, name, referenceStationId, latitude, longitude, ipAddress, deviceType, hasRain, hasSnow, hasWind, hasHydro, localisation, address, city, province, postalCode) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
       [
         clientId,
         stationId,
         name,
         referenceStationId,
-        coefficient,
         latitude,
         longitude,
         ipAddress,
