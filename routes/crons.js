@@ -77,7 +77,6 @@ const startInsertCron = () => {
       "INSERT INTO stationData SET ?",
       newRow
     );
-    console.log("Inserted new row", insertResult);
   });
 };
 

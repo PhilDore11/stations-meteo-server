@@ -5,6 +5,7 @@ const stationDataUtils = require("../utils/stationData");
 
 const getQuery = `
   SELECT 
+    referenceStations.name,
     referenceStationData.* 
   FROM 
     referenceStationData 
