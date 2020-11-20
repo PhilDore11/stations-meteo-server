@@ -3,7 +3,11 @@ const _ = require("lodash");
 
 const stationDataUtils = require("../utils/stationData");
 
-const getQuery = `
+const getStationTableNameQuery = `
+  SELECT * FROM LNDBStationMeta WHERE stationId = ?;
+`;
+
+const getReferenceDataQuery = `
   SELECT 
     referenceStations.name,
     referenceStationData.* 
@@ -17,38 +21,27 @@ const getQuery = `
     stations.stationId = ?;
 `;
 
-const getStationQuery = `
-  SELECT Min(stationData.date)                                       AS stationDate, 
-         Sum(stationData.intensity) / 0.1 * coefficients.coefficient AS intensity 
-  FROM   stationData 
-         JOIN stations 
-           ON stationData.stationId = stations.stationId 
-         JOIN 
-                (SELECT stationCoefficients.* 
-               FROM   stationCoefficients 
-                      INNER JOIN (SELECT stationId, 
-                                         Max(date) AS date 
-                                  FROM   stationCoefficients
-                                  WHERE  stationCoefficients.date < ?
-                                  GROUP  BY stationId) AS max 
-                              ON ( stationCoefficients.stationId = max.stationId 
-                                   AND stationCoefficients.date = max.date )) AS 
-                coefficients 
-           ON ( stations.id = coefficients.stationId ) 
-  WHERE  stationData.stationId = ? 
-         AND ( stationData.date BETWEEN ? AND ? ) 
-  GROUP  BY Year(stationData.date), 
-            Month(stationData.date), 
-            Day(stationData.date), 
-            Hour(stationData.date), 
-            Minute(stationData.date) 
+const getStationDataQuery = (tableName) => `
+  SELECT Min(TmStamp) as stationDate, 
+         Pluie_mm_Tot as intensity 
+  FROM   ${tableName} 
+  WHERE  TmStamp BETWEEN ? AND ? 
+  GROUP  BY Year(TmStamp), 
+    Month(TmStamp), 
+    Day(TmStamp), 
+    Hour(TmStamp), 
+    Minute(TmStamp) 
+`;
+
+const getCoefficientQuery = `
+  SELECT coefficient FROM stationCoefficients WHERE stationId = ? AND date < ? ORDER BY date DESC LIMIT 1
 `;
 
 module.exports = {
-  get: (req, res, next) => {
+  getReferenceData: (req, res, next) => {
     const { stationId } = req.params;
 
-    db.connection.query(getQuery, [stationId], (err, results) => {
+    db.connection.query(getReferenceDataQuery, [stationId], (err, results) => {
       if (err) return next(err.sqlMessage);
 
       res.json(results);
@@ -60,25 +53,48 @@ module.exports = {
     const { start, end } = req.query;
 
     db.connection.query(
-      getStationQuery,
-      [end, stationId, start, end],
-      (err, results) => {
-        if (err) {
-          debugger;
-          return next(err.sqlMessage);
-        }
+      getStationTableNameQuery,
+      [stationId],
+      (err, tableNameResults) => {
+        if (err) return next(err.sqlMessage);
 
-        let idfStationData = [];
-        if (!_.isEmpty(results)) {
-          idfStationData = [5, 10, 15, 30, 60, 120, 360, 720, 1440].map(
-            (increment) => ({
-              increment,
-              intensity: stationDataUtils.getMaxStationData(results, increment),
-            })
-          );
-        }
+        db.connection.query(
+          getStationDataQuery(
+            `${tableNameResults[0].lnStationName}_Precip_5Min`
+          ),
+          [start, end],
+          (err, stationDataResults) => {
+            if (err) {
+              return next(err.sqlMessage);
+            }
 
-        res.json(idfStationData);
+            db.connection.query(
+              getCoefficientQuery,
+              [stationId, end],
+              (err, coefficientResults) => {
+                if (err) {
+                  return next(err.sqlMessage);
+                }
+
+                let idfStationData = [];
+                if (!_.isEmpty(stationDataResults)) {
+                  idfStationData = [5, 10, 15, 30, 60, 120, 360, 720, 1440].map(
+                    (increment) => ({
+                      increment,
+                      intensity: stationDataUtils.getMaxStationData(
+                        stationDataResults,
+                        increment,
+                        coefficientResults[0].coefficient
+                      ),
+                    })
+                  );
+                }
+
+                res.json(idfStationData);
+              }
+            );
+          }
+        );
       }
     );
   },

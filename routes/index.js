@@ -38,7 +38,7 @@ router.get("/stationData/:stationId", stationData.get);
 router.get("/stationData/:stationId/latest", stationData.getLatest);
 
 const idfData = require("./idfData");
-router.get("/idfData/:stationId", idfData.get);
+router.get("/idfData/:stationId", idfData.getReferenceData);
 router.get("/idfData/:stationId/stationData", idfData.getStationData);
 
 const stations = require("./stations");

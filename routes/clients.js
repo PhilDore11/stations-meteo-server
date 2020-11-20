@@ -21,6 +21,22 @@ const getClientsQuery = getAllClientsQuery.concat(`
     clients.id IN (?)
 `);
 
+const getStationsQuery = ` 
+  SELECT stations.*, 
+  coefficients.coefficient 
+  FROM   stations 
+        JOIN(SELECT stationCoefficients.* 
+              FROM   stationCoefficients 
+                    INNER JOIN (SELECT stationId, 
+                                        Max(date) AS date 
+                                FROM   stationCoefficients 
+                                GROUP  BY stationId) AS max 
+                            ON ( stationCoefficients.stationId = max.stationId 
+                                  AND stationCoefficients.date = max.date )) AS 
+                            coefficients 
+          ON ( stations.stationId = coefficients.stationId ) 
+  WHERE  clientid = ?;`;
+
 module.exports = {
   post: (req, res, next) => {
     const { name } = req.body;
@@ -66,28 +82,11 @@ module.exports = {
   },
   getStations: (req, res, next) => {
     const { clientId } = req.params;
-    db.connection.query(
-      ` SELECT stations.*, 
-        coefficients.coefficient 
-        FROM   stations 
-               JOIN(SELECT stationCoefficients.* 
-                    FROM   stationCoefficients 
-                           INNER JOIN (SELECT stationId, 
-                                              Max(date) AS date 
-                                       FROM   stationCoefficients 
-                                       GROUP  BY stationId) AS max 
-                                   ON ( stationCoefficients.stationId = max.stationId 
-                                        AND stationCoefficients.date = max.date )) AS 
-                                   coefficients 
-                 ON ( stations.id = coefficients.stationId ) 
-        WHERE  clientid = ?;`,
-      clientId,
-      (err, results) => {
-        if (err) return next(err.sqlMessage);
+    db.connection.query(getStationsQuery, clientId, (err, results) => {
+      if (err) return next(err.sqlMessage);
 
-        res.json(results);
-      }
-    );
+      res.json(results);
+    });
   },
   delete: (req, res, next) => {
     const { clientId } = req.params;
