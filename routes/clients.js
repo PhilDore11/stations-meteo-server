@@ -34,7 +34,7 @@ const getStationsQuery = `
                             ON ( stationCoefficients.stationId = max.stationId 
                                   AND stationCoefficients.date = max.date )) AS 
                             coefficients 
-          ON ( stations.stationId = coefficients.stationId ) 
+          ON ( stations.id = coefficients.stationId ) 
   WHERE  clientid = ?;`;
 
 module.exports = {

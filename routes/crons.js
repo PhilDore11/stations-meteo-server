@@ -61,25 +61,6 @@ const getStationClient = `
     stations.stationId = ?;
 `;
 
-let indicator = 1;
-
-const startInsertCron = () => {
-  cron.schedule("*/5 * * * *", async () => {
-    const newRow = {
-      indicator: indicator++,
-      stationId: "TST1",
-      date: moment().format(constants.MYSQL_DATETIME_FORMAT),
-      battery: 12 - Math.random() * 5,
-      intensity: Math.random() > 0.7 ? Math.random() * 2 : 0,
-    };
-
-    const insertResult = await db.connection.query(
-      "INSERT INTO stationData SET ?",
-      newRow
-    );
-  });
-};
-
 const startAlertsCron = async () => {
   const transporter = nodemailer.createTransport({
     service: "gmail",
@@ -161,6 +142,5 @@ const startAlertsCron = async () => {
 };
 
 module.exports = {
-  startInsertCron,
   startAlertsCron,
 };

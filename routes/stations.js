@@ -51,9 +51,9 @@ module.exports = {
     );
   },
   put: (req, res, next) => {
-    const { stationId } = req.params;
+    const { id } = req.params;
     db.connection.query(
-      `UPDATE stations SET ? WHERE id=${stationId}`,
+      `UPDATE stations SET ? WHERE id=${id}`,
       req.body,
       (err) => {
         if (err) return next(err.sqlMessage);

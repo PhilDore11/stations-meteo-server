@@ -34,7 +34,14 @@ const getStationDataQuery = (tableName) => `
 `;
 
 const getCoefficientQuery = `
-  SELECT coefficient FROM stationCoefficients WHERE stationId = ? AND date < ? ORDER BY date DESC LIMIT 1
+  SELECT coefficient 
+  FROM   stationCoefficients 
+        JOIN stations 
+          ON stationCoefficients.stationId = stations.id 
+  WHERE  stations.stationId = ? 
+        AND date < ? 
+  ORDER  BY date DESC 
+  LIMIT  1 
 `;
 
 module.exports = {

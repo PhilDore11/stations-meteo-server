@@ -24,7 +24,7 @@ module.exports = {
         SELECT stationCoefficients.* 
         FROM   stationCoefficients 
                JOIN stations 
-                 ON stationCoefficients.stationId = stations.stationId 
+                 ON stationCoefficients.stationId = stations.id 
         WHERE  stations.stationId = ? 
                AND date < ? 
       `,

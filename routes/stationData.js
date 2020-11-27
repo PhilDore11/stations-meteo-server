@@ -12,7 +12,14 @@ const getQuery = (tableName) => `
 `;
 
 const getCoefficientQuery = `
-  SELECT coefficient FROM stationCoefficients WHERE stationId = ? AND date < ? ORDER BY date DESC LIMIT 1
+  SELECT coefficient 
+  FROM   stationCoefficients 
+        JOIN stations 
+          ON stationCoefficients.stationId = stations.id 
+  WHERE  stations.stationId = ? 
+        AND date < ? 
+  ORDER  BY date DESC 
+  LIMIT  1 
 `;
 
 const getLatestQuery = (tableName) => `
@@ -20,7 +27,13 @@ const getLatestQuery = (tableName) => `
 `;
 
 const getLatestCoefficientQuery = `
-  SELECT coefficient FROM stationCoefficients WHERE stationId = ? ORDER BY date DESC LIMIT 1
+  SELECT coefficient 
+  FROM   stationCoefficients 
+        JOIN stations 
+          ON stationCoefficients.stationId = stations.id 
+  WHERE  stations.stationId = ? 
+  ORDER  BY date DESC 
+  LIMIT  1 
 `;
 
 module.exports = {
@@ -97,6 +110,9 @@ module.exports = {
       (err, tableNameResults) => {
         if (err) return next(err.sqlMessage);
 
+        if (!tableNameResults || tableNameResults.length === 0)
+          return res.json({});
+
         db.connection.query(
           getLatestQuery(`${tableNameResults[0].lnStationName}_Precip_5Min`),
           [],
@@ -113,7 +129,7 @@ module.exports = {
                   ...latestResults[0],
                   intensity:
                     (latestResults[0].intensity / 0.1) *
-                    latestCoefficientResults[0],
+                    latestCoefficientResults[0].coefficient,
                 });
               }
             );

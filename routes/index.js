@@ -49,12 +49,14 @@ router.delete("/stations/:stationId", stations.delete);
 const referenceStations = require("./referenceStations");
 router.get("/referenceStations", referenceStations.get);
 
+const lnStations = require("./lnStations");
+router.get("/lnStations", lnStations.get);
+
 const coefficients = require("./coefficients");
 router.get("/coefficients/:stationId", coefficients.get);
 router.post("/coefficients", coefficients.post);
 
 const crons = require("./crons");
-// crons.startInsertCron();
-crons.startAlertsCron();
+// crons.startAlertsCron();
 
 module.exports = router;
