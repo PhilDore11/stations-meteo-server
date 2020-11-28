@@ -1,7 +1,7 @@
 const _ = require("lodash");
 
 module.exports = {
-  getMaxStationData: (data, interval, coefficient) => {
+  getMaxStationData: (data, interval) => {
     let maxValue = 0;
     const arrayOfIndexes = Array.from({ length: interval / 5 }, (v, k) => k);
 
@@ -22,7 +22,7 @@ module.exports = {
 
       const newSum = _.reduce(
         subStationData,
-        (result, data) => result + (data.intensity / 0.1) * coefficient,
+        (result, data) => result + data.intensity,
         0
       );
 

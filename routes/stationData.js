@@ -11,29 +11,8 @@ const getQuery = (tableName) => `
   SELECT MIN(TmStamp) as stationDate, Pluie_mm_Tot as intensity FROM ${tableName} WHERE TmStamp BETWEEN ? AND ?
 `;
 
-const getCoefficientQuery = `
-  SELECT coefficient 
-  FROM   stationCoefficients 
-        JOIN stations 
-          ON stationCoefficients.stationId = stations.id 
-  WHERE  stations.stationId = ? 
-        AND date < ? 
-  ORDER  BY date DESC 
-  LIMIT  1 
-`;
-
 const getLatestQuery = (tableName) => `
   SELECT TmStamp as date, Pluie_mm_Tot as intensity, batt_volt as battery FROM ${tableName} ORDER BY TmStamp DESC LIMIT 1
-`;
-
-const getLatestCoefficientQuery = `
-  SELECT coefficient 
-  FROM   stationCoefficients 
-        JOIN stations 
-          ON stationCoefficients.stationId = stations.id 
-  WHERE  stations.stationId = ? 
-  ORDER  BY date DESC 
-  LIMIT  1 
 `;
 
 module.exports = {
@@ -79,23 +58,7 @@ module.exports = {
             if (err) {
               return next(err.sqlMessage);
             }
-
-            db.connection.query(
-              getCoefficientQuery,
-              [stationId, moment(end).format(constants.MYSQL_DATETIME_FORMAT)],
-              (err, coefficientResults) => {
-                if (err) return next(err.sqlMessage);
-
-                res.json(
-                  stationDataResults.map((result) => ({
-                    ...result,
-                    intensity:
-                      (result.intensity / 0.1) *
-                      coefficientResults[0].coefficient,
-                  }))
-                );
-              }
-            );
+            res.json(stationDataResults);
           }
         );
       }
@@ -119,20 +82,9 @@ module.exports = {
           (err, latestResults) => {
             if (err) return next(err.sqlMessage);
 
-            db.connection.query(
-              getLatestCoefficientQuery,
-              [stationId],
-              (err, latestCoefficientResults) => {
-                if (err) return next(err.sqlMessage);
-
-                res.json({
-                  ...latestResults[0],
-                  intensity:
-                    (latestResults[0].intensity / 0.1) *
-                    latestCoefficientResults[0].coefficient,
-                });
-              }
-            );
+            res.json({
+              ...latestResults[0],
+            });
           }
         );
       }

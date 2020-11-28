@@ -22,20 +22,7 @@ const getClientsQuery = getAllClientsQuery.concat(`
 `);
 
 const getStationsQuery = ` 
-  SELECT stations.*, 
-  coefficients.coefficient 
-  FROM   stations 
-        JOIN(SELECT stationCoefficients.* 
-              FROM   stationCoefficients 
-                    INNER JOIN (SELECT stationId, 
-                                        Max(date) AS date 
-                                FROM   stationCoefficients 
-                                GROUP  BY stationId) AS max 
-                            ON ( stationCoefficients.stationId = max.stationId 
-                                  AND stationCoefficients.date = max.date )) AS 
-                            coefficients 
-          ON ( stations.id = coefficients.stationId ) 
-  WHERE  clientid = ?;`;
+  SELECT * FROM stations WHERE  clientid = ?;`;
 
 module.exports = {
   post: (req, res, next) => {

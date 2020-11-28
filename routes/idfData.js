@@ -33,17 +33,6 @@ const getStationDataQuery = (tableName) => `
     Minute(TmStamp) 
 `;
 
-const getCoefficientQuery = `
-  SELECT coefficient 
-  FROM   stationCoefficients 
-        JOIN stations 
-          ON stationCoefficients.stationId = stations.id 
-  WHERE  stations.stationId = ? 
-        AND date < ? 
-  ORDER  BY date DESC 
-  LIMIT  1 
-`;
-
 module.exports = {
   getReferenceData: (req, res, next) => {
     const { stationId } = req.params;
@@ -74,32 +63,20 @@ module.exports = {
             if (err) {
               return next(err.sqlMessage);
             }
+            let idfStationData = [];
+            if (!_.isEmpty(stationDataResults)) {
+              idfStationData = [5, 10, 15, 30, 60, 120, 360, 720, 1440].map(
+                (increment) => ({
+                  increment,
+                  intensity: stationDataUtils.getMaxStationData(
+                    stationDataResults,
+                    increment
+                  ),
+                })
+              );
+            }
 
-            db.connection.query(
-              getCoefficientQuery,
-              [stationId, end],
-              (err, coefficientResults) => {
-                if (err) {
-                  return next(err.sqlMessage);
-                }
-
-                let idfStationData = [];
-                if (!_.isEmpty(stationDataResults)) {
-                  idfStationData = [5, 10, 15, 30, 60, 120, 360, 720, 1440].map(
-                    (increment) => ({
-                      increment,
-                      intensity: stationDataUtils.getMaxStationData(
-                        stationDataResults,
-                        increment,
-                        coefficientResults[0].coefficient
-                      ),
-                    })
-                  );
-                }
-
-                res.json(idfStationData);
-              }
-            );
+            res.json(idfStationData);
           }
         );
       }
