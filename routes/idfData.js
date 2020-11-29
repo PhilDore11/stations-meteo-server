@@ -22,9 +22,13 @@ const getReferenceDataQuery = `
 `;
 
 const getStationDataQuery = (tableName) => `
-  SELECT Min(TmStamp) as stationDate, 
-         Pluie_mm_Tot as intensity 
+  SELECT Min(TmStamp)     AS stationDate, 
+         Pluie_mm_Tot     AS intensity, 
+         Pluie_mm_Validee AS adjustedIntensity, 
+         Coefficient      AS coefficient 
   FROM   ${tableName} 
+         LEFT JOIN stationData 
+              ON ${tableName}.RecNum = stationData.RecNum 
   WHERE  TmStamp BETWEEN ? AND ? 
   GROUP  BY Year(TmStamp), 
     Month(TmStamp), 

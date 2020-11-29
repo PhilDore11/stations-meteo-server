@@ -2,17 +2,35 @@ const moment = require("moment");
 
 const db = require("./db");
 const constants = require("./constants");
+const stationData = require("../utils/stationData");
 
 const getStationTableNameQuery = `
   SELECT * FROM LNDBStationMeta WHERE stationId = ?
 `;
 
 const getQuery = (tableName) => `
-  SELECT MIN(TmStamp) as stationDate, Pluie_mm_Tot as intensity FROM ${tableName} WHERE TmStamp BETWEEN ? AND ?
+  SELECT Min(TmStamp)     AS stationDate, 
+         Pluie_mm_Tot     AS intensity, 
+         Pluie_mm_Validee AS adjustedIntensity, 
+         Coefficient      AS coefficient 
+  FROM   ${tableName} 
+         LEFT JOIN stationData 
+              ON ${tableName}.RecNum = stationData.RecNum 
+  WHERE  TmStamp BETWEEN ? AND ? 
 `;
 
 const getLatestQuery = (tableName) => `
-  SELECT TmStamp as date, Pluie_mm_Tot as intensity, batt_volt as battery FROM ${tableName} ORDER BY TmStamp DESC LIMIT 1
+  SELECT TmStamp          AS date, 
+         ${tableName}.RecNum,
+         Pluie_mm_Tot     AS intensity, 
+         Pluie_mm_Validee AS adjustedIntensity, 
+         Coefficient      AS coefficient, 
+         batt_volt        AS battery 
+  FROM   ${tableName} 
+         LEFT JOIN stationData 
+              ON ${tableName}.RecNum = stationData.RecNum 
+  ORDER  BY TmStamp DESC 
+  LIMIT  1 
 `;
 
 module.exports = {
@@ -58,7 +76,12 @@ module.exports = {
             if (err) {
               return next(err.sqlMessage);
             }
-            res.json(stationDataResults);
+            res.json(
+              stationDataResults.map((dataResult) => ({
+                ...dataResult,
+                intensity: stationData.getAdjustedIntensity(dataResult),
+              }))
+            );
           }
         );
       }
@@ -82,8 +105,12 @@ module.exports = {
           (err, latestResults) => {
             if (err) return next(err.sqlMessage);
 
+            const result =
+              latestResults && latestResults.length > 0 && latestResults[0];
+
             res.json({
-              ...latestResults[0],
+              ...result,
+              intensity: stationData.getAdjustedIntensity(result),
             });
           }
         );
