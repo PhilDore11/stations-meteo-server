@@ -7,7 +7,6 @@ const nodemailer = require("nodemailer");
 
 const _ = require("lodash");
 
-const constants = require("./constants");
 const db = require("./db");
 
 db.connection.query = util.promisify(db.connection.query);

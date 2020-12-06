@@ -1,10 +1,11 @@
 const db = require("./db");
 const _ = require("lodash");
+const moment = require("moment");
 
 const stationDataUtils = require("../utils/stationData");
 
 const getStationTableNameQuery = `
-  SELECT * FROM LNDBStationMeta WHERE stationId = ?;
+  SELECT * FROM LNDBStationMeta JOIN LNDBTableMeta ON stationId = LNDBStationMeta_stationID WHERE lnTableName = "Precip_5Min" AND stationId = ?
 `;
 
 const getReferenceDataQuery = `
@@ -29,7 +30,7 @@ const getStationDataQuery = (tableName) => `
   FROM   ${tableName} 
          LEFT JOIN stationData 
               ON ${tableName}.RecNum = stationData.RecNum 
-  WHERE  TmStamp BETWEEN ? AND ? 
+  WHERE  ( stationId = ? OR stationId IS NULL ) AND TmStamp BETWEEN ? AND ? 
   GROUP  BY Year(TmStamp), 
     Month(TmStamp), 
     Day(TmStamp), 
@@ -52,6 +53,9 @@ module.exports = {
     const { stationId } = req.params;
     const { start, end } = req.query;
 
+    const queryStart = moment.utc(start).local().toDate();
+    const queryEnd = moment.utc(end).local().toDate();
+
     db.connection.query(
       getStationTableNameQuery,
       [stationId],
@@ -59,10 +63,8 @@ module.exports = {
         if (err) return next(err.sqlMessage);
 
         db.connection.query(
-          getStationDataQuery(
-            `${tableNameResults[0].lnStationName}_Precip_5Min`
-          ),
-          [start, end],
+          getStationDataQuery(tableNameResults[0].dbTableName),
+          [stationId, queryStart, queryEnd],
           (err, stationDataResults) => {
             if (err) {
               return next(err.sqlMessage);

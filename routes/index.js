@@ -36,6 +36,8 @@ router.delete("/alerts/:clientId", alerts.delete);
 const stationData = require("./stationData");
 router.get("/stationData/:stationId", stationData.get);
 router.get("/stationData/:stationId/latest", stationData.getLatest);
+router.get("/stationData/:stationId/export", stationData.export);
+router.post("/stationData/:stationId/import", stationData.import);
 
 const idfData = require("./idfData");
 router.get("/idfData/:stationId", idfData.getReferenceData);
@@ -52,7 +54,7 @@ router.get("/referenceStations", referenceStations.get);
 const lnStations = require("./lnStations");
 router.get("/lnStations", lnStations.get);
 
-const crons = require("./crons");
+// const crons = require("./crons");
 // crons.startAlertsCron();
 
 module.exports = router;
