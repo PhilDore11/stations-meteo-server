@@ -1,8 +1,8 @@
 const db = require("./db");
 const _ = require("lodash");
-const moment = require("moment");
 
 const stationDataUtils = require("../utils/stationData");
+const dateUtils = require("../utils/dateUtils");
 
 const getStationTableNameQuery = `
   SELECT * FROM LNDBStationMeta JOIN LNDBTableMeta ON stationId = LNDBStationMeta_stationID WHERE lnTableName = "Precip_5Min" AND stationId = ?
@@ -53,8 +53,8 @@ module.exports = {
     const { stationId } = req.params;
     const { start, end } = req.query;
 
-    const queryStart = moment.utc(start).local().toDate();
-    const queryEnd = moment.utc(end).local().toDate();
+    const queryStart = dateUtils.convertToDateTimeString(start);
+    const queryEnd = dateUtils.convertToDateTimeString(end);
 
     db.connection.query(
       getStationTableNameQuery,

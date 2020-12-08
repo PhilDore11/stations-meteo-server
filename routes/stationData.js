@@ -1,15 +1,11 @@
-const moment = require("moment");
-moment.locale("fr");
-
 const fs = require("fs");
+const { every, isNumber } = require("lodash");
 
 const converter = require("json-2-csv");
 
 const db = require("./db");
 const stationData = require("../utils/stationData");
-const { isNumber } = require("lodash");
-
-const EXPORT_DATE_TIME_FORMAT = "DD MMM YYYY HH:mm:ss";
+const dateUtils = require("../utils/dateUtils");
 
 const getStationTableNameQuery = `
   SELECT * FROM LNDBStationMeta JOIN LNDBTableMeta ON stationId = LNDBStationMeta_stationID WHERE lnTableName = "Precip_5Min" AND stationId = ?
@@ -27,18 +23,20 @@ const getQuery = (tableName) => `
 `;
 
 const getLatestQuery = (tableName) => `
-  SELECT TmStamp          AS date, 
-         ${tableName}.RecNum,
+  SELECT TmStamp          AS date,
+         RecNum,
          Pluie_mm_Tot     AS intensity, 
-         Pluie_mm_Validee AS adjustedIntensity, 
-         Coefficient      AS coefficient, 
-         batt_volt        AS battery 
-  FROM   ${tableName} 
-         LEFT JOIN stationData 
-              ON ${tableName}.RecNum = stationData.RecNum 
-  WHERE  stationId = ? OR stationId IS NULL
-  ORDER  BY TmStamp DESC 
-  LIMIT  1 
+         batt_volt        AS battery
+  FROM ${tableName} 
+  ORDER  BY TmStamp ASC 
+  LIMIT  1
+`;
+
+const getLatestStationDataQuery = `
+  SELECT Pluie_mm_Validee AS adjustedIntensity, 
+         Coefficient      AS coefficient
+  FROM stationData 
+  WHERE stationId = ? AND RecNum = ?
 `;
 
 const exportQuery = (tableName) => `
@@ -87,8 +85,8 @@ module.exports = {
       groupByClauses = ["YEAR(TmStamp)", "MONTH(TmStamp)", "DAY(TmStamp)"];
     }
 
-    const queryStart = moment.utc(start).local().toDate();
-    const queryEnd = moment.utc(end).local().toDate();
+    const queryStart = dateUtils.convertToDateTimeString(start);
+    const queryEnd = dateUtils.convertToDateTimeString(end);
 
     db.connection.query(
       getStationTableNameQuery,
@@ -105,12 +103,15 @@ module.exports = {
             if (err) {
               return next(err.sqlMessage);
             }
-            res.json(
-              stationDataResults.map((dataResult) => ({
+            res.json({
+              validated: every(stationDataResults, (result) =>
+                isNumber(result.adjustedIntensity)
+              ),
+              data: stationDataResults.map((dataResult) => ({
                 ...dataResult,
                 intensity: stationData.getAdjustedIntensity(dataResult),
-              }))
-            );
+              })),
+            });
           }
         );
       }
@@ -130,17 +131,32 @@ module.exports = {
 
         db.connection.query(
           getLatestQuery(tableNameResults[0].dbTableName),
-          [stationId],
+          [],
           (err, latestResults) => {
             if (err) return next(err.sqlMessage);
 
-            const result =
-              latestResults && latestResults.length > 0 && latestResults[0];
+            db.connection.query(
+              getLatestStationDataQuery,
+              [stationId, latestResults[0].RecNum],
+              (err, latestStationResults) => {
+                if (err) return next(err.sqlMessage);
 
-            res.json({
-              ...result,
-              intensity: stationData.getAdjustedIntensity(result),
-            });
+                const result =
+                  latestResults && latestResults.length > 0 && latestResults[0];
+                const stationResult =
+                  latestStationResults &&
+                  latestStationResults.length > 0 &&
+                  latestStationResults[0];
+
+                res.json({
+                  ...result,
+                  intensity: stationData.getAdjustedIntensity({
+                    ...result,
+                    ...stationResult,
+                  }),
+                });
+              }
+            );
           }
         );
       }
@@ -151,8 +167,8 @@ module.exports = {
     const { stationId } = req.params;
     const { start, end } = req.query;
 
-    const queryStart = moment.utc(start).local().toDate();
-    const queryEnd = moment.utc(end).local().toDate();
+    const queryStart = dateUtils.convertToDateTimeString(start);
+    const queryEnd = dateUtils.convertToDateTimeString(end);
 
     db.connection.query(
       getStationTableNameQuery,
@@ -170,13 +186,16 @@ module.exports = {
               return next(err.sqlMessage);
             }
 
-            const exportFilename = `/tmp/${dbTableName}-${queryStart}-${queryEnd}.csv`;
+            const filenameStart = dateUtils.convertToDateString(start);
+            const filenameEnd = dateUtils.convertToDateString(end);
+
+            const exportFilename = `/tmp/${dbTableName}-${filenameStart}-${filenameEnd}.csv`;
 
             converter.json2csv(
               stationDataResults.map((result) => ({
                 stationId,
                 ...result,
-                TmStamp: moment(result.TmStamp).format(EXPORT_DATE_TIME_FORMAT),
+                TmStamp: dateUtils.convertToDateTimeString(result.TmStamp),
               })),
               (err, csv) => {
                 if (err) {
