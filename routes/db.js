@@ -1,10 +1,10 @@
 const mysql = require("mysql");
 
 const connection = mysql.createConnection({
-  host: "stations-meteo.c7abk9qcbiox.ca-central-1.rds.amazonaws.com",
+  host: "199.103.63.27",
   port: 3306,
-  user: "admin",
-  password: "Chanelle1",
+  user: "jfsa",
+  password: "R5cA!nr6CYT1",
   database: "stationsMeteoDB",
 });
 
