@@ -196,9 +196,15 @@ module.exports = {
                 stationId,
                 RecNum: result.RecNum,
                 TmStamp: dateUtils.convertToDateTimeString(result.TmStamp),
-                Pluie_mm_Tot: result.Pluie_mm_Tot.toString(),
-                Pluie_mm_Validee: result.Pluie_mm_Validee.toString(),
-                Coefficient: result.Coefficient.toString(),
+                Pluie_mm_Tot: isNumber(result.Pluie_mm_Tot)
+                  ? result.Pluie_mm_Tot.toString()
+                  : "",
+                Pluie_mm_Validee: isNumber(result.Pluie_mm_Validee)
+                  ? result.Pluie_mm_Validee.toString()
+                  : "",
+                Coefficient: isNumber(result.Coefficient)
+                  ? result.Coefficient.toString()
+                  : "",
               })),
               (err, csv) => {
                 if (err) {
