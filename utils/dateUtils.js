@@ -8,9 +8,9 @@ const DATETIME_FORMAT = `${DATE_FORMAT} HH:mm:ss`;
 
 module.exports = {
   convertToDateString: (momentValue) => {
-    return moment(momentValue).tz(TIME_ZONE).format(DATE_FORMAT);
+    return moment.utc(momentValue).local().format(DATE_FORMAT);
   },
   convertToDateTimeString: (momentValue) => {
-    return moment(momentValue).tz(TIME_ZONE).format(DATETIME_FORMAT);
+    return moment.utc(momentValue).local().format(DATETIME_FORMAT);
   },
 };

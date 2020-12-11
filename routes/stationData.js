@@ -44,7 +44,7 @@ const exportQuery = (tableName) => `
          TmStamp, 
          Pluie_mm_Tot, 
          Pluie_mm_Validee, 
-         Coefficient 
+         Coefficient
   FROM   ${tableName} 
          LEFT JOIN stationData 
               ON ${tableName}.RecNum = stationData.RecNum 
@@ -194,8 +194,11 @@ module.exports = {
             converter.json2csv(
               stationDataResults.map((result) => ({
                 stationId,
-                ...result,
+                RecNum: result.RecNum,
                 TmStamp: dateUtils.convertToDateTimeString(result.TmStamp),
+                Pluie_mm_Tot: result.Pluie_mm_Tot.toString(),
+                Pluie_mm_Validee: result.Pluie_mm_Validee.toString(),
+                Coefficient: result.Coefficient.toString(),
               })),
               (err, csv) => {
                 if (err) {
@@ -210,7 +213,7 @@ module.exports = {
                   res.download(exportFilename);
                 });
               },
-              { emptyFieldValue: "", useDateIso8601Format: true }
+              { emptyFieldValue: "" }
             );
           }
         );
@@ -278,6 +281,9 @@ module.exports = {
         );
       },
       {
+        delimiter: { eol: "\r\n" },
+        trimHeaderFields: true,
+        trimFieldValues: true,
         fields: [
           "RecNum",
           "TmStamp",
