@@ -76,10 +76,6 @@ const exportQuery = (tableName) => `
   ORDER  BY ${tableName}.TmStamp 
   `;
 
-const clearValidatedResultsQuery = `
-  DELETE FROM stationData WHERE (stationId, RecNum, TmStamp) IN (?)
-`;
-
 const insertMissingResultsQuery = (tableName) => `
   INSERT INTO ${tableName} (TmStamp, RecNum) 
   SELECT  stationData.TmStamp, 
@@ -92,7 +88,11 @@ const insertMissingResultsQuery = (tableName) => `
 `;
 
 const insertValidatedResultsQuery = `
-  INSERT INTO stationData (stationId, RecNum, TmStamp, Pluie_mm_Validee, Coefficient) VALUES ?
+  INSERT INTO stationData (stationId, RecNum, TmStamp, Pluie_mm_Validee, Coefficient) 
+      VALUES ? 
+  ON DUPLICATE KEY UPDATE 
+      Pluie_mm_Validee = VALUES (Pluie_mm_Validee)
+  
 `;
 
 module.exports = {
@@ -276,47 +276,34 @@ module.exports = {
           )
           .filter(Boolean);
 
-        const existingValues = values.map((value) => value.slice(0, 3));
-
         db.connection.query(
-          clearValidatedResultsQuery,
-          [existingValues],
-          (err, clearResults) => {
+          insertValidatedResultsQuery,
+          [values],
+          (err, importResults) => {
             if (err) {
               return next(err);
             }
 
             db.connection.query(
-              insertValidatedResultsQuery,
-              [values],
-              (err, importResults) => {
-                if (err) {
-                  return next(err);
-                }
+              getStationTableNameQuery,
+              [stationId],
+              (err, tableNameResults) => {
+                if (err) return next(err.sqlMessage);
+
+                const dbTableName = tableNameResults[0].dbTableName;
 
                 db.connection.query(
-                  getStationTableNameQuery,
+                  insertMissingResultsQuery(dbTableName),
                   [stationId],
-                  (err, tableNameResults) => {
-                    if (err) return next(err.sqlMessage);
+                  (err, insertMissingResults) => {
+                    if (err) {
+                      return next(err);
+                    }
 
-                    const dbTableName = tableNameResults[0].dbTableName;
-
-                    db.connection.query(
-                      insertMissingResultsQuery(dbTableName),
-                      [stationId],
-                      (err, insertMissingResults) => {
-                        if (err) {
-                          return next(err);
-                        }
-
-                        res.json({
-                          clearResults,
-                          importResults,
-                          insertMissingResults,
-                        });
-                      }
-                    );
+                    res.json({
+                      importResults,
+                      insertMissingResults,
+                    });
                   }
                 );
               }
