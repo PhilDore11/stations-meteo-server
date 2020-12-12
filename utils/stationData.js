@@ -5,7 +5,7 @@ const getAdjustedIntensity = (result) => {
     ? result.adjustedIntensity
     : result.intensity;
   return result.coefficient
-    ? intensity * (0.1 / result.coefficient)
+    ? (intensity / 0.1) * result.coefficient
     : intensity;
 };
 
@@ -14,34 +14,26 @@ module.exports = {
 
   getMaxStationData: (data, interval) => {
     let maxValue = 0;
-    const arrayOfIndexes = Array.from({ length: interval / 5 }, (v, k) => k);
+    const numberOfValues = interval / 5;
 
-    const dataLength = data.length;
+    data.forEach((_dataItem, i) => {
+      if (i < numberOfValues - 1) return;
 
-    data.forEach((dataItem, i) => {
-      const subStationData = _.reduce(
-        arrayOfIndexes,
-        (result, index) => {
-          if (i + index < dataLength) {
-            return _.concat(result, data[i + index]);
-          }
+      const newDataArray = data.slice(i - numberOfValues + 1, i + 1);
 
-          return result;
+      const newMaxValue = _.reduce(
+        newDataArray,
+        function (sum, result) {
+          return sum + getAdjustedIntensity(result);
         },
-        []
-      );
-
-      const newSum = _.reduce(
-        subStationData,
-        (result, data) => result + getAdjustedIntensity(data),
         0
       );
 
-      if (newSum > maxValue) {
-        maxValue = newSum;
+      if (newMaxValue > maxValue) {
+        maxValue = newMaxValue;
       }
     });
 
-    return maxValue;
+    return maxValue * (60 / interval);
   },
 };

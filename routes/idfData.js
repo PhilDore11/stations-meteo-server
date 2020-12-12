@@ -1,5 +1,6 @@
 const db = require("./db");
 const _ = require("lodash");
+const { writeFileSync } = require("fs");
 
 const stationDataUtils = require("../utils/stationData");
 const dateUtils = require("../utils/dateUtils");
@@ -23,19 +24,20 @@ const getReferenceDataQuery = `
 `;
 
 const getStationDataQuery = (tableName) => `
-  SELECT Min(TmStamp)     AS stationDate, 
-         Pluie_mm_Tot     AS intensity, 
-         Pluie_mm_Validee AS adjustedIntensity, 
-         Coefficient      AS coefficient 
+  SELECT Min(${tableName}.TmStamp)    AS stationDate, 
+         Pluie_mm_Tot                 AS intensity, 
+         Pluie_mm_Validee             AS adjustedIntensity, 
+         Coefficient                  AS coefficient 
   FROM   ${tableName} 
          LEFT JOIN stationData 
-              ON ${tableName}.RecNum = stationData.RecNum 
-  WHERE  ( stationId = ? OR stationId IS NULL ) AND TmStamp BETWEEN ? AND ? 
-  GROUP  BY Year(TmStamp), 
-    Month(TmStamp), 
-    Day(TmStamp), 
-    Hour(TmStamp), 
-    Minute(TmStamp) 
+              ON ${tableName}.RecNum = stationData.RecNum AND ${tableName}.TmStamp = stationData.TmStamp 
+  WHERE  ( stationId = ? OR stationId IS NULL ) AND ${tableName}.TmStamp BETWEEN ? AND ? 
+  GROUP  BY Year(${tableName}.TmStamp), 
+    Month(${tableName}.TmStamp), 
+    Day(${tableName}.TmStamp), 
+    Hour(${tableName}.TmStamp), 
+    Minute(${tableName}.TmStamp)
+  ORDER BY ${tableName}.TmStamp
 `;
 
 module.exports = {
@@ -70,16 +72,31 @@ module.exports = {
               return next(err.sqlMessage);
             }
             let idfStationData = [];
+
+            writeFileSync(
+              "/tmp/stationData.js",
+              JSON.stringify(stationDataResults)
+            );
+
             if (!_.isEmpty(stationDataResults)) {
-              idfStationData = [5, 10, 15, 30, 60, 120, 360, 720, 1440].map(
-                (increment) => ({
-                  increment,
-                  intensity: stationDataUtils.getMaxStationData(
-                    stationDataResults,
-                    increment
-                  ),
-                })
-              );
+              idfStationData = [
+                5,
+                10,
+                15,
+                30,
+                60,
+                120,
+                180,
+                360,
+                720,
+                1440,
+              ].map((increment) => ({
+                increment,
+                intensity: stationDataUtils.getMaxStationData(
+                  stationDataResults,
+                  increment
+                ),
+              }));
             }
 
             res.json(idfStationData);

@@ -11,15 +11,42 @@ const getStationTableNameQuery = `
   SELECT * FROM LNDBStationMeta JOIN LNDBTableMeta ON stationId = LNDBStationMeta_stationID WHERE lnTableName = "Precip_5Min" AND stationId = ?
 `;
 
-const getQuery = (tableName) => `
-  SELECT Min(TmStamp)     AS stationDate, 
+const getGroupByClauses = (view, tableName) => {
+  switch (view) {
+    case "day":
+      return [
+        `YEAR(${tableName}.TmStamp)`,
+        `MONTH(${tableName}.TmStamp)`,
+        `DAY(${tableName}.TmStamp)`,
+        `HOUR(${tableName}.TmStamp)`,
+        `MINUTE(${tableName}.TmStamp)`,
+      ];
+    case "week":
+      return [
+        `YEAR(${tableName}.TmStamp)`,
+        `MONTH(${tableName}.TmStamp)`,
+        `DAY(${tableName}.TmStamp)`,
+        `HOUR(${tableName}.TmStamp)`,
+      ];
+    default:
+      return [
+        `YEAR(${tableName}.TmStamp)`,
+        `MONTH(${tableName}.TmStamp)`,
+        `DAY(${tableName}.TmStamp)`,
+      ];
+  }
+};
+
+const getQuery = (view, tableName) => `
+  SELECT Min(${tableName}.TmStamp)     AS stationDate, 
          Pluie_mm_Tot     AS intensity, 
          Pluie_mm_Validee AS adjustedIntensity, 
          Coefficient      AS coefficient 
   FROM   ${tableName} 
          LEFT JOIN stationData 
-              ON ${tableName}.RecNum = stationData.RecNum 
-  WHERE  ( stationId = ? OR stationId IS NULL ) AND TmStamp BETWEEN ? AND ? 
+              ON ${tableName}.RecNum = stationData.RecNum AND ${tableName}.TmStamp = stationData.TmStamp
+  WHERE  ( stationId = ? OR stationId IS NULL ) AND ${tableName}.TmStamp BETWEEN ? AND ? 
+  GROUP BY ${getGroupByClauses(view, tableName)}
 `;
 
 const getLatestQuery = (tableName) => `
@@ -41,49 +68,29 @@ const getLatestStationDataQuery = `
 
 const exportQuery = (tableName) => `
   SELECT ${tableName}.RecNum, 
-         TmStamp, 
+         ${tableName}.TmStamp, 
          Pluie_mm_Tot, 
          Pluie_mm_Validee, 
          Coefficient
   FROM   ${tableName} 
          LEFT JOIN stationData 
-              ON ${tableName}.RecNum = stationData.RecNum 
-  WHERE  ( stationId = ? OR stationId IS NULL ) AND TmStamp BETWEEN ? AND ? 
-  ORDER  BY TmStamp 
+              ON ${tableName}.RecNum = stationData.RecNum AND ${tableName}.TmStamp = stationData.TmStamp 
+  WHERE  ( stationId = ? OR stationId IS NULL ) AND ${tableName}.TmStamp BETWEEN ? AND ? 
+  ORDER  BY ${tableName}.TmStamp 
   `;
 
 const clearValidatedResultsQuery = `
-  DELETE FROM stationData WHERE (stationId, RecNum) IN (?)
+  DELETE FROM stationData WHERE (stationId, RecNum, TmStamp) IN (?)
 `;
 
 const insertValidatedResultsQuery = `
-  INSERT INTO stationData (stationId, RecNum, Pluie_mm_Validee, Coefficient) VALUES ?
+  INSERT INTO stationData (stationId, RecNum, TmStamp, Pluie_mm_Validee, Coefficient) VALUES ?
 `;
 
 module.exports = {
   get: (req, res, next) => {
     const { stationId } = req.params;
     const { start, end, view } = req.query;
-
-    let groupByClauses;
-    if (view === "day") {
-      groupByClauses = [
-        "YEAR(TmStamp)",
-        "MONTH(TmStamp)",
-        "DAY(TmStamp)",
-        "HOUR(TmStamp)",
-        "MINUTE(TmStamp)",
-      ];
-    } else if (view === "week") {
-      groupByClauses = [
-        "YEAR(TmStamp)",
-        "MONTH(TmStamp)",
-        "DAY(TmStamp)",
-        "HOUR(TmStamp)",
-      ];
-    } else {
-      groupByClauses = ["YEAR(TmStamp)", "MONTH(TmStamp)", "DAY(TmStamp)"];
-    }
 
     const queryStart = dateUtils.convertToDateTimeString(start);
     const queryEnd = dateUtils.convertToDateTimeString(end);
@@ -95,9 +102,7 @@ module.exports = {
         if (err) return next(err.sqlMessage);
 
         db.connection.query(
-          getQuery(tableNameResults[0].dbTableName) +
-            " GROUP BY " +
-            groupByClauses.join(", "),
+          getQuery(view, tableNameResults[0].dbTableName),
           [stationId, queryStart, queryEnd],
           (err, stationDataResults) => {
             if (err) {
@@ -255,6 +260,7 @@ module.exports = {
               ? [
                   stationId,
                   validatedRow.RecNum,
+                  validatedRow.TmStamp,
                   validatedRow.Pluie_mm_Validee,
                   validatedRow.Coefficient,
                 ]
@@ -262,7 +268,7 @@ module.exports = {
           )
           .filter(Boolean);
 
-        const existingValues = values.map((value) => value.slice(0, 2));
+        const existingValues = values.map((value) => value.slice(0, 3));
 
         db.connection.query(
           clearValidatedResultsQuery,
@@ -280,7 +286,10 @@ module.exports = {
                   return next(err);
                 }
 
-                res.json(importResults);
+                res.json({
+                  clearResults,
+                  importResults,
+                });
               }
             );
           }
