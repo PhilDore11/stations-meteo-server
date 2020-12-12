@@ -267,7 +267,7 @@ module.exports = {
             isNumber(validatedRow.Coefficient)
               ? [
                   stationId,
-                  validatedRow.RecNum,
+                  validatedRow.RecNum || 0,
                   validatedRow.TmStamp,
                   validatedRow.Pluie_mm_Validee,
                   validatedRow.Coefficient,
