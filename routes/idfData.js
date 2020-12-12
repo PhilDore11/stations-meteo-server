@@ -4,10 +4,7 @@ const { writeFileSync } = require("fs");
 
 const stationDataUtils = require("../utils/stationData");
 const dateUtils = require("../utils/dateUtils");
-
-const getStationTableNameQuery = `
-  SELECT * FROM LNDBStationMeta JOIN LNDBTableMeta ON stationId = LNDBStationMeta_stationID WHERE lnTableName = "Precip_5Min" AND stationId = ?
-`;
+const { getStationTableNameQuery } = require("../utils/stationTableUtils");
 
 const getReferenceDataQuery = `
   SELECT 

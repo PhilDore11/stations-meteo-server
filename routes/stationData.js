@@ -6,10 +6,7 @@ const converter = require("json-2-csv");
 const db = require("./db");
 const stationData = require("../utils/stationData");
 const dateUtils = require("../utils/dateUtils");
-
-const getStationTableNameQuery = `
-  SELECT * FROM LNDBStationMeta JOIN LNDBTableMeta ON stationId = LNDBStationMeta_stationID WHERE lnTableName = "Precip_5Min" AND stationId = ?
-`;
+const { getStationTableNameQuery } = require("../utils/stationTableUtils");
 
 const getGroupByClauses = (view, tableName) => {
   switch (view) {
@@ -81,6 +78,17 @@ const exportQuery = (tableName) => `
 
 const clearValidatedResultsQuery = `
   DELETE FROM stationData WHERE (stationId, RecNum, TmStamp) IN (?)
+`;
+
+const insertMissingResultsQuery = (tableName) => `
+  INSERT INTO ${tableName} (TmStamp, RecNum) 
+  SELECT  stationData.TmStamp, 
+          stationData.RecNum 
+  FROM    ${tableName} 
+          RIGHT JOIN stationData 
+              ON ${tableName}.RecNum = stationData.RecNum 
+                  AND ${tableName}.TmStamp = stationData.TmStamp 
+  WHERE   stationId = ? AND ${tableName}.RecNum IS NULL 
 `;
 
 const insertValidatedResultsQuery = `
@@ -286,10 +294,31 @@ module.exports = {
                   return next(err);
                 }
 
-                res.json({
-                  clearResults,
-                  importResults,
-                });
+                db.connection.query(
+                  getStationTableNameQuery,
+                  [stationId],
+                  (err, tableNameResults) => {
+                    if (err) return next(err.sqlMessage);
+
+                    const dbTableName = tableNameResults[0].dbTableName;
+
+                    db.connection.query(
+                      insertMissingResultsQuery(dbTableName),
+                      [stationId],
+                      (err, insertMissingResults) => {
+                        if (err) {
+                          return next(err);
+                        }
+
+                        res.json({
+                          clearResults,
+                          importResults,
+                          insertMissingResults,
+                        });
+                      }
+                    );
+                  }
+                );
               }
             );
           }
