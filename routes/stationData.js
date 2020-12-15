@@ -52,7 +52,7 @@ const getLatestQuery = (tableName) => `
          Pluie_mm_Tot     AS intensity, 
          batt_volt        AS battery
   FROM ${tableName} 
-  ORDER  BY TmStamp ASC 
+  ORDER  BY TmStamp DESC 
   LIMIT  1
 `;
 
