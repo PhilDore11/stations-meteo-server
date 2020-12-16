@@ -41,8 +41,8 @@ const getQuery = (view, tableName) => `
          Coefficient      AS coefficient 
   FROM   ${tableName} 
          LEFT JOIN stationData 
-              ON ${tableName}.RecNum = stationData.RecNum AND ${tableName}.TmStamp = stationData.TmStamp
-  WHERE  ( stationId = ? OR stationId IS NULL ) AND ${tableName}.TmStamp BETWEEN ? AND ? 
+              ON stationId = ? AND ${tableName}.RecNum = stationData.RecNum AND ${tableName}.TmStamp = stationData.TmStamp
+  WHERE  ${tableName}.TmStamp BETWEEN ? AND ? 
   GROUP BY ${getGroupByClauses(view, tableName)}
 `;
 
@@ -71,8 +71,8 @@ const exportQuery = (tableName) => `
          Coefficient
   FROM   ${tableName} 
          LEFT JOIN stationData 
-              ON ${tableName}.RecNum = stationData.RecNum AND ${tableName}.TmStamp = stationData.TmStamp 
-  WHERE  ( stationId = ? OR stationId IS NULL ) AND ${tableName}.TmStamp BETWEEN ? AND ? 
+              ON stationId = ? AND ${tableName}.RecNum = stationData.RecNum AND ${tableName}.TmStamp = stationData.TmStamp 
+  WHERE  ${tableName}.TmStamp BETWEEN ? AND ? 
   ORDER  BY ${tableName}.TmStamp 
   `;
 
