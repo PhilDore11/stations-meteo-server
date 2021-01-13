@@ -76,18 +76,16 @@ module.exports = {
             );
 
             if (!_.isEmpty(stationDataResults)) {
-              idfStationData = [
-                5,
-                10,
-                15,
-                30,
-                60,
-                120,
-                180,
-                360,
-                720,
-                1440,
-              ].map((increment) => ({
+              let idfIncrementsSmall = Array.from(Array(60 / 5).keys());
+              let idfIncrementsLarge = Array.from(Array(1500 / 60).keys());
+              idfIncrementsSmall.splice(0, 1);
+              idfIncrementsLarge.splice(0, 1);
+              idfIncrements = [
+                ...idfIncrementsSmall.map((increment) => increment * 5),
+                ...idfIncrementsLarge.map((increment) => increment * 60),
+              ];
+
+              idfStationData = idfIncrements.map((increment) => ({
                 increment,
                 intensity: stationDataUtils.getMaxStationData(
                   stationDataResults,
