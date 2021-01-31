@@ -91,8 +91,8 @@ const insertValidatedResultsQuery = `
   INSERT INTO stationData (stationId, RecNum, TmStamp, Pluie_mm_Validee, Coefficient) 
       VALUES ? 
   ON DUPLICATE KEY UPDATE 
-      Pluie_mm_Validee = VALUES (Pluie_mm_Validee)
-  
+      Pluie_mm_Validee = VALUES (Pluie_mm_Validee),
+      Coefficient = VALUES (Coefficient)
 `;
 
 module.exports = {
@@ -116,6 +116,7 @@ module.exports = {
             if (err) {
               return next(err.sqlMessage);
             }
+
             res.json({
               validated: every(stationDataResults, (result) =>
                 isNumber(result.adjustedIntensity)

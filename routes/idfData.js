@@ -1,6 +1,5 @@
 const db = require("./db");
 const _ = require("lodash");
-const { writeFileSync } = require("fs");
 
 const stationDataUtils = require("../utils/stationData");
 const dateUtils = require("../utils/dateUtils");
@@ -69,11 +68,6 @@ module.exports = {
               return next(err.sqlMessage);
             }
             let idfStationData = [];
-
-            writeFileSync(
-              "/tmp/stationData.js",
-              JSON.stringify(stationDataResults)
-            );
 
             if (!_.isEmpty(stationDataResults)) {
               idfStationData = [
