@@ -38,32 +38,34 @@ const xlargeTestDataResults = {
   1440: 0.693,
 };
 
-describe("Test small data set", () => {
-  [5, 10, 15, 30, 60].forEach((increment) => {
-    test(`should calculate ${increment} min mm/h`, () => {
-      expect(
-        stationDataUtil.getMaxStationData(smallTestData, increment)
-      ).toBeCloseTo(smallTestDataResults[increment], 3);
+describe("Station Data", () => {
+  describe("Test small data set", () => {
+    [5, 10, 15, 30, 60].forEach((increment) => {
+      test(`should calculate ${increment} min mm/h`, () => {
+        expect(
+          stationDataUtil.getMaxStationData(smallTestData, increment)
+        ).toBeCloseTo(smallTestDataResults[increment], 3);
+      });
     });
   });
-});
 
-describe("Test large data set", () => {
-  [5, 10, 15, 30, 60, 120, 180, 360, 720, 1440].forEach((increment) => {
-    test(`should calculate ${increment} min mm/h`, () => {
-      expect(
-        stationDataUtil.getMaxStationData(largeTestData, increment)
-      ).toBeCloseTo(largeTestDataResults[increment], 3);
+  describe("Test large data set", () => {
+    [5, 10, 15, 30, 60, 120, 180, 360, 720, 1440].forEach((increment) => {
+      test(`should calculate ${increment} min mm/h`, () => {
+        expect(
+          stationDataUtil.getMaxStationData(largeTestData, increment)
+        ).toBeCloseTo(largeTestDataResults[increment], 3);
+      });
     });
   });
-});
 
-describe("Test xlarge data set", () => {
-  [5, 10, 15, 30, 60, 120, 180, 360, 720, 1440].forEach((increment) => {
-    test(`should calculate ${increment} min mm/h`, () => {
-      expect(
-        stationDataUtil.getMaxStationData(xlargeTestData, increment)
-      ).toBeCloseTo(xlargeTestDataResults[increment], 3);
+  describe("Test xlarge data set", () => {
+    [5, 10, 15, 30, 60, 120, 180, 360, 720, 1440].forEach((increment) => {
+      test(`should calculate ${increment} min mm/h`, () => {
+        expect(
+          stationDataUtil.getMaxStationData(xlargeTestData, increment)
+        ).toBeCloseTo(xlargeTestDataResults[increment], 3);
+      });
     });
   });
 });
