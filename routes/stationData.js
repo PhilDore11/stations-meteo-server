@@ -3,7 +3,7 @@ const { every, isNumber } = require("lodash");
 
 const converter = require("json-2-csv");
 
-const db = require("./db");
+const db = require("../utils/db");
 const stationData = require("../utils/stationData");
 const dateUtils = require("../utils/dateUtils");
 const { getStationTableNameQuery } = require("../utils/stationTableUtils");

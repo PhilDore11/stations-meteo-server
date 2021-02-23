@@ -1,4 +1,4 @@
-const db = require("./db");
+const db = require("../utils/db");
 const _ = require("lodash");
 
 const stationDataUtils = require("../utils/stationData");

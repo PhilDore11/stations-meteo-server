@@ -5,7 +5,7 @@ const data = require("./data");
 
 router.get("/data", data);
 
-const db = require("./db");
+const db = require("../utils/db");
 db.connect();
 
 const auth = require("./auth");
@@ -54,7 +54,7 @@ router.get("/referenceStations", referenceStations.get);
 const lnStations = require("./lnStations");
 router.get("/lnStations", lnStations.get);
 
-// const crons = require("./crons");
-// crons.startAlertsCron();
+const crons = require("./crons");
+crons.startAlertsCron();
 
 module.exports = router;

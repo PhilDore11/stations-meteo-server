@@ -35,20 +35,20 @@ module.exports = {
     return result;
   },
 
-  findAlertThreshold: (incrementalData, referenceIncrementalData) => {
+  findAlertThresholds: (incrementalData, referenceIncrementalData) => {
     const result = {};
-    forEach(referenceIncrementalData, (referenceData, referenceKey) => {
-      forEach([2, 5, 10, 25, 50, 100], (alertInterval) => {
-        const data = incrementalData[alertInterval];
-        if (data / referenceData[alertInterval] > 0.9) {
-          result[referenceKey] = {
-            interval: alertInterval,
-            data: data,
-            threshold: referenceData[alertInterval],
-            reached: data / referenceData[alertInterval],
-          };
+    forEach(incrementalData, (data, dataKey) => {
+      forEach(
+        referenceIncrementalData[dataKey],
+        (alertThreshold, alertThresholdKey) => {
+          if (data >= alertThreshold) {
+            result[dataKey] = {
+              interval: parseInt(alertThresholdKey),
+              reached: parseFloat((data / alertThreshold).toFixed(2)),
+            };
+          }
         }
-      });
+      );
     });
 
     return result;

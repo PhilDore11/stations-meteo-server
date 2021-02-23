@@ -1,3 +1,5 @@
+const util = require("util");
+
 const mysql = require("mysql");
 
 const connection = mysql.createConnection({
@@ -7,6 +9,7 @@ const connection = mysql.createConnection({
   password: "R5cA!nr6CYT1",
   database: "stationsMeteoDB",
 });
+connection.query = util.promisify(connection.query);
 
 module.exports = {
   connection,

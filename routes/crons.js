@@ -1,37 +1,28 @@
-const util = require("util");
-
 const cron = require("node-cron");
-const moment = require("moment");
-moment.locale("fr");
-const nodemailer = require("nodemailer");
 
-const _ = require("lodash");
+const { forEach, isEmpty } = require("lodash");
 
-const db = require("./db");
+const db = require("../utils/db");
 
-db.connection.query = util.promisify(db.connection.query);
+const { getStationTableName } = require("../utils/stationTableUtils");
+const {
+  getIncrementalData,
+  getReferenceIncrementalData,
+  findAlertThresholds,
+} = require("../utils/alertUtils");
+const { sendRainEmail } = require("../utils/emailUtils");
+const { logger } = require("../utils/logger");
 
-const getStationDataForAlertsQuery = `
-  SELECT stationData.stationId, 
-         stationData.DATE, 
-         stationData.intensity / 0.1 * coefficients.coefficient AS intensity 
-  FROM   stationData 
-         join stations 
-              join (SELECT stationCoefficients.* 
-                    FROM   stationCoefficients 
-                           inner join (SELECT stationId, 
-                                              Max(DATE) AS date 
-                                       FROM   stationCoefficients 
-                                       GROUP  BY stationId) AS max 
-                                   ON ( stationCoefficients.stationId = 
-                                        max.stationId 
-                                        AND stationCoefficients.DATE = max.DATE )) 
-                   AS 
-                                                    coefficients 
-                ON ( stations.id = coefficients.stationId ) 
-           ON stationData.stationId = stations.stationId 
-  WHERE  stationData.DATE >= Now() - interval 1 day 
-  ORDER  BY DATE DESC; 
+const getStationDataForAlertsQuery = (tableName) => `
+  SELECT ${tableName}.TmStamp         AS stationDate, 
+         Pluie_mm_Tot                 AS intensity, 
+         Pluie_mm_Validee             AS adjustedIntensity, 
+         Coefficient                  AS coefficient 
+  FROM   ${tableName} 
+         LEFT JOIN stationData 
+              ON stationId = ? AND ${tableName}.RecNum = stationData.RecNum AND ${tableName}.TmStamp = stationData.TmStamp 
+  WHERE  ${tableName}.TmStamp >= NOW() - INTERVAL 24 HOUR
+  ORDER BY ${tableName}.TmStamp DESC
 `;
 
 const getReferenceStationQuery = `
@@ -47,97 +38,121 @@ const getReferenceStationQuery = `
     stations.stationId = ?;
 `;
 
-const getStationClient = `
-  SELECT
-    clients.*
-  FROM
-    clients
-  JOIN
-    stations
-  ON
-    stations.clientId = clients.id
-  WHERE
-    stations.stationId = ?;
+const getAllStations = `
+  SELECT 
+    stationId,
+    clientId, 
+    stations.name as stationName, 
+    clients.name as clientName, 
+    hasRain, 
+    hasSnow, 
+    hasWind, 
+    hasTemperature, 
+    hasHydro 
+  FROM stations 
+  JOIN clients ON stations.clientId = clients.id
+`;
+
+const getClientAlertConfig = `
+  SELECT * FROM clientAlerts JOIN clients ON clientAlerts.clientId = clients.id WHERE clientId=?
+`;
+
+const getStationAlert = `
+  SELECT * FROM stationAlerts WHERE stationId = ? AND 
+  (TmStamp = ? OR (
+    \`5\` = ? AND \`10\` = ? AND \`15\` = ? AND \`30\` = ? AND \`60\` = ? AND \`120\` = ? AND \`360\` = ? AND \`720\` = ? AND \`1440\` = ?
+  ))
+`;
+
+const insertStationAlert = `
+  INSERT INTO stationAlerts (stationId, TmStamp, \`5\`, \`10\`, \`15\`, \`30\`, \`60\`, \`120\`, \`360\`, \`720\`, \`1440\`) 
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `;
 
 const startAlertsCron = async () => {
-  const transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-      user: "philippe.dore.11@gmail.com",
-      pass: "chanelle1",
-    },
-  });
+  try {
+    const stationsResults = await db.connection.query(getAllStations);
+    forEach(stationsResults, async (station) => {
+      const stationTableName = await getStationTableName(station.stationId);
 
-  cron.schedule("*/5 * * * *", async () => {
-    console.log("Checking for alerts...");
-    try {
-      const stationDataResults = await db.connection.query(
-        getStationDataForAlertsQuery
+      if (!stationTableName) return;
+
+      if (station.hasRain) startRainAlertsCron(stationTableName, station);
+    });
+  } catch (e) {
+    console.error("Error starting alerts", e);
+  }
+};
+
+const startRainAlertsCron = async (stationTableName, station) => {
+  // cron.schedule("*/5 * * * *", async () => {
+  console.log(`Checking for rain alerts for ${station.stationName}...`);
+  try {
+    // Station Data
+    const stationDataResults = await db.connection.query(
+      getStationDataForAlertsQuery(stationTableName),
+      [station.stationId]
+    );
+
+    if (isEmpty(stationDataResults)) return;
+
+    const incrementalData = getIncrementalData(stationDataResults);
+
+    // Reference Data
+    const referenceDataResults = await db.connection.query(
+      getReferenceStationQuery,
+      [station.stationId]
+    );
+    const referenceData = getReferenceIncrementalData(referenceDataResults);
+
+    const alertThresholds = findAlertThresholds(incrementalData, referenceData);
+
+    if (!isEmpty(alertThresholds)) {
+      const lastTimeEntry = stationDataResults[0].stationDate;
+
+      const alertRowValues = [5, 10, 15, 30, 60, 120, 360, 720, 1440].map(
+        (increment) =>
+          (alertThresholds[increment] && alertThresholds[increment].interval) ||
+          0
       );
-      const groupedResults = _.groupBy(
-        stationDataResults,
-        (res) => res.stationId
-      );
 
-      _.each(groupedResults, async (stationData, stationId) => {
-        const stationClientResults = await db.connection.query(
-          getStationClient,
-          [stationId]
+      // Retrieve Existing Alert
+      const existingAlert = await db.connection.query(getStationAlert, [
+        station.stationId,
+        lastTimeEntry,
+        ...alertRowValues,
+      ]);
+
+      if (isEmpty(existingAlert)) {
+        console.log(`Sending new alert for ${station.stationName}...`);
+
+        // Add Entry to Alerts Table
+        await db.connection.query(insertStationAlert, [
+          station.stationId,
+          lastTimeEntry,
+          ...alertRowValues,
+        ]);
+
+        // Client Alert Config
+        const clientAlertConfig = await db.connection.query(
+          getClientAlertConfig,
+          [station.clientId]
         );
-        const client = stationClientResults[0];
-        const clientAlerts = await db.connection.query(
-          "SELECT * FROM clientAlerts WHERE clientId=?",
-          [client.id]
+
+        await sendRainEmail(
+          clientAlertConfig,
+          lastTimeEntry,
+          incrementalData,
+          alertThresholds
         );
-
-        const referenceStationResults = await db.connection.query(
-          getReferenceStationQuery,
-          [stationId]
-        );
-        [5, 10, 15, 30, 60, 120, 360, 720, 1440].map(async (increment) => {
-          const intensity = _.reduce(
-            stationData,
-            (sum, data, index) =>
-              index < increment / 5 ? (sum += data.intensity) : sum,
-            0
-          );
-          let index = 0;
-          let referenceData = referenceStationResults[index++];
-
-          const rainAlertEmails = clientAlerts.filter(
-            (alert) => alert.hasRain === 1
-          );
-
-          while (
-            index <= referenceStationResults.length &&
-            intensity > referenceData[increment]
-          ) {
-            const formattedInterval = moment
-              .duration(increment, "minutes")
-              .humanize();
-            console.log(
-              `Hit threshold for ${formattedInterval} - ${intensity}`
-            );
-            const mailOptions = {
-              from: "alertes@jfsa.test.com",
-              to: rainAlertEmails,
-              subject: `${client.name} - Alerte de pluie - ${moment().format(
-                "lll"
-              )}`,
-              text: `Une précipitation importante a été enregistrée lors des derniers ${formattedInterval}`,
-            };
-
-            await transporter.sendMail(mailOptions);
-
-            referenceData = referenceStationResults[index++];
-          }
-        });
-      });
-    } catch (e) {
-      console.error("Error", e);
+      } else {
+        console.log(`Alert already sent for ${station.stationName}...`);
+      }
     }
-  });
+  } catch (e) {
+    console.error("Error", e);
+  }
+  // });
 };
 
 module.exports = {
