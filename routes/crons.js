@@ -16,12 +16,8 @@ const { convertToDateString } = require("../utils/dateUtils");
 
 const getStationDataForAlertsQuery = (tableName) => `
   SELECT ${tableName}.TmStamp         AS stationDate, 
-         Pluie_mm_Tot                 AS intensity, 
-         Pluie_mm_Validee             AS adjustedIntensity, 
-         Coefficient                  AS coefficient 
-  FROM   ${tableName} 
-         LEFT JOIN stationData 
-              ON stationId = ? AND ${tableName}.RecNum = stationData.RecNum AND ${tableName}.TmStamp = stationData.TmStamp 
+         Pluie_mm_Tot                 AS intensity
+  FROM   ${tableName}
   WHERE  ${tableName}.TmStamp >= NOW() - INTERVAL 24 HOUR
   ORDER BY ${tableName}.TmStamp DESC
 `;
@@ -44,11 +40,23 @@ const getAllClients = `
 `;
 
 const getClientStations = `
-  SELECT * FROM stations WHERE stations.clientId = ?
-`;
+  SELECT stations.*, 
+         coefficient
+  FROM   stations
+  LEFT JOIN (SELECT *
+      FROM   stationCoefficients
+      GROUP  BY stationId
+      ORDER  BY dateModified DESC
+      LIMIT  1) AS stationCoefficient
+  ON stations.stationId = stationCoefficient.stationId
+  WHERE  clientid = ?;`;
 
 const getClientAlertConfig = `
   SELECT * FROM clientAlerts JOIN clients ON clientAlerts.clientId = clients.id WHERE clientId=?
+`;
+
+const getStationCoefficients = `
+  SELECT * FROM stationCoefficients WHERE stationId = ? ORDER BY dateModified DESC;
 `;
 
 const getStationAlert = `
@@ -78,11 +86,24 @@ const startAlertsCron = async () => {
 
           if (!stationTableName) return;
 
+          // Station Coefficients
+          let stationCoefficientsResults = await db.connection.query(
+            getStationCoefficients,
+            [station.stationId]
+          );
+
           // Station Data
-          const stationDataResults = await db.connection.query(
+          let stationDataResults = await db.connection.query(
             getStationDataForAlertsQuery(stationTableName),
             [station.stationId]
           );
+          stationDataResults = stationDataResults.map((result) => ({
+            ...result,
+            coefficient: stationCoefficientsResults.find(
+              (stationCoefficient) =>
+                stationCoefficient.dateModified <= result.stationDate
+            )?.coefficient,
+          }));
 
           if (station.hasRain) {
             clientRainAlerts[station.name] = {
@@ -98,7 +119,7 @@ const startAlertsCron = async () => {
           (clientRainAlert) => !isEmpty(clientRainAlert.alertThresholds)
         );
 
-        if (true || hasRainAlerts) {
+        if (hasRainAlerts) {
           let hasNewRainAlerts = false;
           let lastTimeEntry;
 

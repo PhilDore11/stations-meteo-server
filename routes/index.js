@@ -54,6 +54,9 @@ router.get("/referenceStations", referenceStations.get);
 const lnStations = require("./lnStations");
 router.get("/lnStations", lnStations.get);
 
+const coefficients = require("./coefficients");
+router.post("/coefficients", coefficients.post);
+
 const crons = require("./crons");
 crons.startAlertsCron();
 

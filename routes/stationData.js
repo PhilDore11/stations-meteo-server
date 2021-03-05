@@ -76,6 +76,10 @@ const exportQuery = (tableName) => `
   ORDER  BY ${tableName}.TmStamp 
   `;
 
+const getStationCoefficients = `
+  SELECT * FROM stationCoefficients WHERE stationId = ? AND dateModified < ? ORDER BY dateModified DESC;
+`;
+
 const insertMissingResultsQuery = (tableName) => `
   INSERT INTO ${tableName} (TmStamp, RecNum) 
   SELECT  stationData.TmStamp, 
@@ -200,40 +204,53 @@ module.exports = {
               return next(err.sqlMessage);
             }
 
-            const filenameStart = dateUtils.convertToDateString(start);
-            const filenameEnd = dateUtils.convertToDateString(end);
-
-            const exportFilename = `/tmp/${dbTableName}-${filenameStart}-${filenameEnd}.csv`;
-
-            converter.json2csv(
-              stationDataResults.map((result) => ({
-                stationId,
-                RecNum: result.RecNum,
-                TmStamp: dateUtils.convertToDateTimeString(result.TmStamp),
-                Pluie_mm_Tot: isNumber(result.Pluie_mm_Tot)
-                  ? result.Pluie_mm_Tot.toString()
-                  : "",
-                Pluie_mm_Validee: isNumber(result.Pluie_mm_Validee)
-                  ? result.Pluie_mm_Validee.toString()
-                  : "",
-                Coefficient: isNumber(result.Coefficient)
-                  ? result.Coefficient.toString()
-                  : "",
-              })),
-              (err, csv) => {
+            db.connection.query(
+              getStationCoefficients,
+              [stationId, queryEnd],
+              (err, stationCoefficientsResults) => {
                 if (err) {
-                  return next(err);
+                  return next(err.sqlMessage);
                 }
 
-                fs.writeFile(exportFilename, csv, (err) => {
-                  if (err) {
-                    return next(err);
-                  }
+                const filenameStart = dateUtils.convertToDateString(start);
+                const filenameEnd = dateUtils.convertToDateString(end);
 
-                  res.download(exportFilename);
-                });
-              },
-              { emptyFieldValue: "" }
+                const exportFilename = `/tmp/${dbTableName}-${filenameStart}-${filenameEnd}.csv`;
+
+                converter.json2csv(
+                  stationDataResults.map((result) => ({
+                    stationId,
+                    RecNum: result.RecNum,
+                    TmStamp: dateUtils.convertToDateTimeString(result.TmStamp),
+                    Pluie_mm_Tot: isNumber(result.Pluie_mm_Tot)
+                      ? result.Pluie_mm_Tot.toString()
+                      : "",
+                    Pluie_mm_Validee: isNumber(result.Pluie_mm_Validee)
+                      ? result.Pluie_mm_Validee.toString()
+                      : "",
+                    Coefficient: isNumber(result.Coefficient)
+                      ? result.Coefficient.toString()
+                      : stationCoefficientsResults.find(
+                          (stationCoefficient) =>
+                            stationCoefficient.dateModified <= result.TmStamp
+                        )?.coefficient,
+                  })),
+                  (err, csv) => {
+                    if (err) {
+                      return next(err);
+                    }
+
+                    fs.writeFile(exportFilename, csv, (err) => {
+                      if (err) {
+                        return next(err);
+                      }
+
+                      res.download(exportFilename);
+                    });
+                  },
+                  { emptyFieldValue: "" }
+                );
+              }
             );
           }
         );
