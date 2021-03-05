@@ -107,9 +107,7 @@ const startAlertsCron = async () => {
           for (const clientRainAlertKey of clientRainAlertKeys) {
             const clientRainAlert = clientRainAlerts[clientRainAlertKey];
 
-            lastTimeEntry =
-              lastTimeEntry ??
-              clientRainAlert.stationDataResults[0]?.stationDate;
+            lastTimeEntry = clientRainAlert.stationDataResults[0]?.stationDate;
 
             const alertRowValues = [5, 10, 15, 30, 60, 120, 360, 720, 1440].map(
               (increment) =>
