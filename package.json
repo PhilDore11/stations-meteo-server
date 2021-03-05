@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "start": "nodemon --exec babel-node ./bin/www",
+    "start:forever": "forever start -c babel-node ./bin/www",
     "start:dev": "cross-env PORT=3001 nodemon --exec babel-node ./bin/www",
     "test": "jest --coverage"
   },
