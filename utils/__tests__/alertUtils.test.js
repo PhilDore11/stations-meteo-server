@@ -113,12 +113,13 @@ describe("Alert Utils", () => {
         )
       ).toEqual({
         5: {
+          data: 1.2,
           interval: 2,
-          reached: 1.2,
+          threshold: 1,
         },
-        10: { interval: 5, reached: 1.36 },
-        15: { interval: 10, reached: 1.25 },
-        30: { interval: 5, reached: 1 },
+        10: { data: 1.9, interval: 5, threshold: 1.4 },
+        15: { data: 1.5, interval: 10, threshold: 1.2 },
+        30: { data: 0.5, interval: 5, threshold: 0.5 },
       });
     });
   });

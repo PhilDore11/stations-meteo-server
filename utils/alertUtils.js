@@ -43,8 +43,9 @@ module.exports = {
         (alertThreshold, alertThresholdKey) => {
           if (data >= alertThreshold) {
             result[dataKey] = {
+              data,
               interval: parseInt(alertThresholdKey),
-              reached: parseFloat((data / alertThreshold).toFixed(2)),
+              threshold: alertThreshold,
             };
           }
         }

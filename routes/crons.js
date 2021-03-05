@@ -1,6 +1,6 @@
 const cron = require("node-cron");
 
-const { forEach, isEmpty } = require("lodash");
+const { some, forEach, isEmpty } = require("lodash");
 
 const db = require("../utils/db");
 
@@ -10,8 +10,9 @@ const {
   getReferenceIncrementalData,
   findAlertThresholds,
 } = require("../utils/alertUtils");
-const { sendRainEmail } = require("../utils/emailUtils");
+const { sendRainEmail } = require("../utils/emails/emailUtils.jsx");
 const { logger } = require("../utils/logger");
+const { convertToDateString } = require("../utils/dateUtils");
 
 const getStationDataForAlertsQuery = (tableName) => `
   SELECT ${tableName}.TmStamp         AS stationDate, 
@@ -38,19 +39,12 @@ const getReferenceStationQuery = `
     stations.stationId = ?;
 `;
 
-const getAllStations = `
-  SELECT 
-    stationId,
-    clientId, 
-    stations.name as stationName, 
-    clients.name as clientName, 
-    hasRain, 
-    hasSnow, 
-    hasWind, 
-    hasTemperature, 
-    hasHydro 
-  FROM stations 
-  JOIN clients ON stations.clientId = clients.id
+const getAllClients = `
+  SELECT * FROM clients WHERE id=4;
+`;
+
+const getClientStations = `
+  SELECT * FROM stations WHERE stations.clientId = ?
 `;
 
 const getClientAlertConfig = `
@@ -70,32 +64,106 @@ const insertStationAlert = `
 `;
 
 const startAlertsCron = async () => {
-  try {
-    const stationsResults = await db.connection.query(getAllStations);
-    forEach(stationsResults, async (station) => {
-      const stationTableName = await getStationTableName(station.stationId);
+  cron.schedule("*/5 * * * *", async () => {
+    try {
+      const clientsResults = await db.connection.query(getAllClients);
+      forEach(clientsResults, async (client) => {
+        const stationsResults = await db.connection.query(getClientStations, [
+          client.id,
+        ]);
 
-      if (!stationTableName) return;
+        const clientRainAlerts = {};
+        for (const station of stationsResults) {
+          const stationTableName = await getStationTableName(station.stationId);
 
-      if (station.hasRain) startRainAlertsCron(stationTableName, station);
-    });
-  } catch (e) {
-    console.error("Error starting alerts", e);
-  }
+          if (!stationTableName) return;
+
+          // Station Data
+          const stationDataResults = await db.connection.query(
+            getStationDataForAlertsQuery(stationTableName),
+            [station.stationId]
+          );
+
+          if (station.hasRain) {
+            clientRainAlerts[station.name] = {
+              id: station.id,
+              stationDataResults,
+              ...(await checkRainAlerts(stationDataResults, station)),
+            };
+          }
+        }
+
+        const hasRainAlerts = some(
+          clientRainAlerts,
+          (clientRainAlert) => !isEmpty(clientRainAlert.alertThresholds)
+        );
+
+        if (true || hasRainAlerts) {
+          let hasNewRainAlerts = false;
+          let lastTimeEntry;
+
+          const clientRainAlertKeys = Object.keys(clientRainAlerts);
+
+          for (const clientRainAlertKey of clientRainAlertKeys) {
+            const clientRainAlert = clientRainAlerts[clientRainAlertKey];
+
+            lastTimeEntry =
+              lastTimeEntry ??
+              clientRainAlert.stationDataResults[0]?.stationDate;
+
+            const alertRowValues = [5, 10, 15, 30, 60, 120, 360, 720, 1440].map(
+              (increment) =>
+                (clientRainAlert.alertThresholds[increment] &&
+                  clientRainAlert.alertThresholds[increment].data) ||
+                0
+            );
+
+            // Retrieve Existing Alert
+            const existingAlert = await db.connection.query(getStationAlert, [
+              clientRainAlert.id,
+              lastTimeEntry,
+              ...alertRowValues,
+            ]);
+
+            if (isEmpty(existingAlert)) {
+              hasNewRainAlerts = true;
+              // Add Entry to Alerts Table
+              await db.connection.query(insertStationAlert, [
+                clientRainAlert.id,
+                lastTimeEntry,
+                ...alertRowValues,
+              ]);
+            }
+          }
+
+          if (hasNewRainAlerts) {
+            console.log(`Sending new alert for client ${client.name}...`);
+
+            // Client Alert Config
+            const clientAlertConfig = await db.connection.query(
+              getClientAlertConfig,
+              [client.id]
+            );
+
+            await sendRainEmail(
+              clientAlertConfig,
+              clientRainAlerts,
+              lastTimeEntry
+            );
+          } else {
+            console.log(`Alert already sent for client ${client.name}...`);
+          }
+        }
+      });
+    } catch (e) {
+      console.error("Error starting alerts", e);
+    }
+  });
 };
 
-const startRainAlertsCron = async (stationTableName, station) => {
-  // cron.schedule("*/5 * * * *", async () => {
-  console.log(`Checking for rain alerts for ${station.stationName}...`);
+const checkRainAlerts = async (stationDataResults, station) => {
+  console.log(`Checking for rain alerts for station ${station.name}...`);
   try {
-    // Station Data
-    const stationDataResults = await db.connection.query(
-      getStationDataForAlertsQuery(stationTableName),
-      [station.stationId]
-    );
-
-    if (isEmpty(stationDataResults)) return;
-
     const incrementalData = getIncrementalData(stationDataResults);
 
     // Reference Data
@@ -107,52 +175,10 @@ const startRainAlertsCron = async (stationTableName, station) => {
 
     const alertThresholds = findAlertThresholds(incrementalData, referenceData);
 
-    if (!isEmpty(alertThresholds)) {
-      const lastTimeEntry = stationDataResults[0].stationDate;
-
-      const alertRowValues = [5, 10, 15, 30, 60, 120, 360, 720, 1440].map(
-        (increment) =>
-          (alertThresholds[increment] && alertThresholds[increment].interval) ||
-          0
-      );
-
-      // Retrieve Existing Alert
-      const existingAlert = await db.connection.query(getStationAlert, [
-        station.stationId,
-        lastTimeEntry,
-        ...alertRowValues,
-      ]);
-
-      if (isEmpty(existingAlert)) {
-        console.log(`Sending new alert for ${station.stationName}...`);
-
-        // Add Entry to Alerts Table
-        await db.connection.query(insertStationAlert, [
-          station.stationId,
-          lastTimeEntry,
-          ...alertRowValues,
-        ]);
-
-        // Client Alert Config
-        const clientAlertConfig = await db.connection.query(
-          getClientAlertConfig,
-          [station.clientId]
-        );
-
-        await sendRainEmail(
-          clientAlertConfig,
-          lastTimeEntry,
-          incrementalData,
-          alertThresholds
-        );
-      } else {
-        console.log(`Alert already sent for ${station.stationName}...`);
-      }
-    }
+    return { incrementalData, alertThresholds };
   } catch (e) {
     console.error("Error", e);
   }
-  // });
 };
 
 module.exports = {
