@@ -104,7 +104,6 @@ class IdfAlert extends React.PureComponent {
   componentDidMount() {
     const chartCanvas = this.refs.chart;
     const dataURL = chartCanvas.toDataURL();
-    console.log("CHART REF", dataURL);
     const chartImage = this.refs.image;
     chartImage.src = dataURL;
   }
@@ -196,12 +195,8 @@ class IdfAlert extends React.PureComponent {
               <TableRow key={0}>
                 <TableCell>Station</TableCell>
                 {increments.map((increment) => (
-                  <TableCell key={increment} align="right" width={50}>
-                    {increment < 60
-                      ? `${increment} m`
-                      : increment == 60
-                      ? `${increment / 60} hr`
-                      : `${increment / 60} hrs`}
+                  <TableCell key={increment} align="center" width={50}>
+                    {formatIncrementText(increment)}
                   </TableCell>
                 ))}
               </TableRow>
@@ -213,7 +208,7 @@ class IdfAlert extends React.PureComponent {
                   {increments.map((increment) => (
                     <TableCell
                       key={increment}
-                      align="right"
+                      align="center"
                       style={{
                         backgroundColor:
                           thresholdColors[

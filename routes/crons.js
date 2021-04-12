@@ -1,5 +1,10 @@
 const cron = require("node-cron");
 
+// add timestamps in front of log messages
+require("console-stamp")(console, {
+  format: ":date(yyyy/mm/dd HH:MM:ss.l) :label",
+});
+
 const { some, forEach, isEmpty } = require("lodash");
 
 const db = require("../utils/db");
@@ -36,7 +41,7 @@ const getReferenceStationQuery = `
 `;
 
 const getAllClients = `
-  SELECT * FROM clients WHERE id=4;
+  SELECT * FROM clients;
 `;
 
 const getClientStations = `
@@ -74,17 +79,28 @@ const insertStationAlert = `
 const startAlertsCron = async () => {
   cron.schedule("*/5 * * * *", async () => {
     try {
+      console.debug(`ALERTS - starting...`);
+
       const clientsResults = await db.connection.query(getAllClients);
       forEach(clientsResults, async (client) => {
+        console.debug(`ALERTS - ${client.name} - starting...`);
         const stationsResults = await db.connection.query(getClientStations, [
           client.id,
         ]);
 
         const clientRainAlerts = {};
         for (const station of stationsResults) {
+          console.debug(
+            `ALERTS - ${client.name} - ${station.name} - starting...`
+          );
           const stationTableName = await getStationTableName(station.stationId);
 
-          if (!stationTableName) return;
+          if (!stationTableName) {
+            console.warn(
+              `Could not find table for station (${station.id}: ${station.name})`
+            );
+            return;
+          }
 
           // Station Coefficients
           let stationCoefficientsResults = await db.connection.query(
@@ -92,11 +108,20 @@ const startAlertsCron = async () => {
             [station.stationId]
           );
 
+          console.debug(
+            `ALERTS - ${client.name} - ${station.name} - Found ${stationCoefficientsResults.length} coefficients ...`
+          );
+
           // Station Data
           let stationDataResults = await db.connection.query(
             getStationDataForAlertsQuery(stationTableName),
             [station.stationId]
           );
+
+          console.debug(
+            `ALERTS - ${client.name} - ${station.name} - Found ${stationDataResults.length} results ...`
+          );
+
           stationDataResults = stationDataResults.map((result) => ({
             ...result,
             coefficient: stationCoefficientsResults.find(
@@ -120,6 +145,8 @@ const startAlertsCron = async () => {
         );
 
         if (hasRainAlerts) {
+          console.debug(`ALERTS - ${client.name} - Has rain alerts ...`);
+
           let hasNewRainAlerts = false;
           let lastTimeEntry;
 
@@ -156,7 +183,7 @@ const startAlertsCron = async () => {
           }
 
           if (hasNewRainAlerts) {
-            console.log(`Sending new alert for client ${client.name}...`);
+            console.debug(`ALERTS - ${client.name} - Sending new alert...`);
 
             // Client Alert Config
             const clientAlertConfig = await db.connection.query(
@@ -165,12 +192,15 @@ const startAlertsCron = async () => {
             );
 
             await sendRainEmail(
+              client,
               clientAlertConfig,
               clientRainAlerts,
               lastTimeEntry
             );
           } else {
-            console.log(`Alert already sent for client ${client.name}...`);
+            console.debug(
+              `ALERTS - ${client.name} - Found previously sent alert...`
+            );
           }
         }
       });
@@ -181,7 +211,6 @@ const startAlertsCron = async () => {
 };
 
 const checkRainAlerts = async (stationDataResults, station) => {
-  console.log(`Checking for rain alerts for station ${station.name}...`);
   try {
     const incrementalData = getIncrementalData(stationDataResults);
 

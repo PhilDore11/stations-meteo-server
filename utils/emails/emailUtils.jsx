@@ -1,3 +1,8 @@
+// add timestamps in front of log messages
+require("console-stamp")(console, {
+  format: ":date(yyyy/mm/dd HH:MM:ss.l) :label",
+});
+
 const React = require("react");
 const ReactDOMServer = require("react-dom/server");
 const {
@@ -42,7 +47,12 @@ function renderFullPage(html, css) {
 }
 
 module.exports = {
-  sendRainEmail: async (clientAlertConfig, clientRainAlerts, alertDateTime) => {
+  sendRainEmail: async (
+    client,
+    clientAlertConfig,
+    clientRainAlerts,
+    alertDateTime
+  ) => {
     try {
       const clientEmails =
         clientAlertConfig &&
@@ -51,6 +61,11 @@ module.exports = {
           .filter(Boolean);
 
       if (!isEmpty(clientEmails)) {
+        console.debug(
+          `EMAIL - ${client.name} - Sending emails to [${clientEmails.join(
+            ", "
+          )}]...`
+        );
         const sheets = new ServerStyleSheets();
 
         // Render the component to a string.
@@ -68,12 +83,16 @@ module.exports = {
         const mailOptions = {
           from: "alerte-orage@jfsa-ftp.com",
           to: clientEmails,
-          subject: `${clientEmails} - Alerte de pluie - ${convertToDateTimeString(alertDateTime)}`,
+          subject: `${clientEmails} - Alerte de pluie - ${convertToDateTimeString(
+            alertDateTime
+          )}`,
           html: renderFullPage(html, css),
           text:
             "Une précipitation importante a été enregistrée lors des derniers 24h",
         };
         await transporter.sendMail(mailOptions);
+      } else {
+        console.debug(`EMAIL - ${client.name} - No email address found...`);
       }
     } catch (e) {
       console.error("Error sending email", e);
