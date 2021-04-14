@@ -41,7 +41,7 @@ const getReferenceStationQuery = `
 `;
 
 const getAllClients = `
-  SELECT * FROM clients;
+  SELECT * FROM clients where id=12;
 `;
 
 const getClientStations = `
