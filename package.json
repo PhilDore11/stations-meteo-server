@@ -22,7 +22,7 @@
     "fs": "0.0.1-security",
     "http-errors": "~1.6.2",
     "json-2-csv": "^3.7.12",
-    "lodash": "^4.17.20",
+    "lodash": "^4.17.21",
     "moment": "^2.22.2",
     "moment-timezone": "^0.5.32",
     "mysql": "^2.16.0",
