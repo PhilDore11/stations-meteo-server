@@ -1,7 +1,7 @@
 import React from "react";
 import PropTypes from "prop-types";
 
-import { maxBy } from "lodash";
+import { maxBy, isEmpty } from "lodash";
 
 import Table from "@material-ui/core/Table";
 import TableBody from "@material-ui/core/TableBody";
@@ -65,40 +65,40 @@ const data = {
   ],
 };
 
-const options = {
-  maintainAspectRatio: false,
+// const options = {
+//   maintainAspectRatio: false,
 
-  legend: {
-    labels: {
-      filter: (item) => !item.text.startsWith("HIDE"),
-    },
-  },
-  scales: {
-    xAxes: [
-      {
-        ticks: {
-          min: 0,
-          max: 1440,
-          callback: (value, index) => formatIncrementText(value),
-        },
-      },
-    ],
-    yAxes: [
-      {
-        scaleLabel: {
-          display: true,
-          labelString: "Periode de retour (ans)",
-        },
-        type: "logarithmic",
-        ticks: {
-          min: 1,
-          max: 100,
-          callback: (value) => Number(value.toString()),
-        },
-      },
-    ],
-  },
-};
+//   legend: {
+//     labels: {
+//       filter: (item) => !item.text.startsWith("HIDE"),
+//     },
+//   },
+//   scales: {
+//     xAxes: [
+//       {
+//         ticks: {
+//           min: 0,
+//           max: 1440,
+//           callback: (value, index) => formatIncrementText(value),
+//         },
+//       },
+//     ],
+//     yAxes: [
+//       {
+//         scaleLabel: {
+//           display: true,
+//           labelString: "Periode de retour (ans)",
+//         },
+//         type: "logarithmic",
+//         ticks: {
+//           min: 1,
+//           max: 100,
+//           callback: (value) => Number(value.toString()),
+//         },
+//       },
+//     ],
+//   },
+// };
 
 class IdfAlert extends React.PureComponent {
   componentDidMount() {
@@ -109,21 +109,37 @@ class IdfAlert extends React.PureComponent {
   }
 
   render() {
-    const getThresholdForStation = (stationIncrementalAlertThresholds) => {
-      return stationIncrementalAlertThresholds
-        ? (
-            (stationIncrementalAlertThresholds?.data /
-              stationIncrementalAlertThresholds?.threshold) *
-            stationIncrementalAlertThresholds?.interval
-          ).toFixed(2)
-        : "-";
+    const getThresholdForStation = (
+      increment,
+      stationIncrementalAlertThresholds,
+      referenceVariables
+    ) => {
+      if (!stationIncrementalAlertThresholds) return "-";
+
+      const data = stationIncrementalAlertThresholds?.data * (increment / 60);
+      const { a, b, c } = referenceVariables[
+        stationIncrementalAlertThresholds?.interval
+      ];
+
+      return (
+        (-(b * Math.pow(data, 1 / c)) + Math.pow(a, 1 / c)) /
+        Math.pow(data, 1 / c)
+      ).toFixed(2);
     };
 
-    const getMaxThresholdForStation = (stationAlertThresholds) => {
-      return maxBy(Object.keys(stationAlertThresholds), (increment) =>
-        parseFloat(getThresholdForStation(stationAlertThresholds?.[increment]))
+    const getMaxThresholdForStation = (
+      stationAlertThresholds,
+      referenceVariables
+    ) =>
+      maxBy(Object.keys(stationAlertThresholds), (increment) =>
+        parseFloat(
+          getThresholdForStation(
+            increment,
+            stationAlertThresholds?.[increment],
+            referenceVariables
+          )
+        )
       );
-    };
 
     return (
       <div>
@@ -137,49 +153,49 @@ class IdfAlert extends React.PureComponent {
           Période de retour maximale (ans) pour chaque station
         </Typography>
         <div style={{ display: "flex" }}>
-          {Object.keys(this.props.clientRainAlerts).map((key) => (
-            <div
-              key={key}
-              style={{
-                width: 200,
-                padding: 20,
-                margin: 10,
-                border: "1px solid #E0E0E0",
-                backgroundColor:
-                  thresholdColors[
-                    this.props.clientRainAlerts[key]?.alertThresholds[
-                      getMaxThresholdForStation(
-                        this.props.clientRainAlerts[key]?.alertThresholds
-                      )
-                    ]?.interval
-                  ],
-              }}
-            >
-              <Typography variant="subtitle1" align="center">
-                {key}
-              </Typography>
-              <Typography variant="h5" align="center">
-                {`${getThresholdForStation(
-                  this.props.clientRainAlerts[key]?.alertThresholds[
-                    getMaxThresholdForStation(
-                      this.props.clientRainAlerts[key]?.alertThresholds
-                    )
-                  ]
-                )} ans (${formatIncrementText(
-                  getMaxThresholdForStation(
-                    this.props.clientRainAlerts[key]?.alertThresholds
-                  )
-                )})`}
-              </Typography>
-              <Typography variant="body2" align="center">
-                {`${this.props.clientRainAlerts[key]?.alertThresholds[
-                  getMaxThresholdForStation(
-                    this.props.clientRainAlerts[key]?.alertThresholds
-                  )
-                ]?.data.toFixed(2)} mm/h`}
-              </Typography>
-            </div>
-          ))}
+          {Object.keys(this.props.clientRainAlerts).map((key) => {
+            const alertThresholds = this.props.clientRainAlerts[key]
+              ?.alertThresholds;
+
+            if (isEmpty(alertThresholds)) return null;
+
+            const referenceVariables = this.props.clientRainAlerts[key]
+              ?.referenceData?.referenceVariables;
+
+            const maxThreshold = getMaxThresholdForStation(
+              alertThresholds,
+              referenceVariables
+            );
+
+            const maxAlertThreshold = alertThresholds[maxThreshold];
+
+            return (
+              <div
+                key={key}
+                style={{
+                  width: 200,
+                  padding: 20,
+                  margin: 10,
+                  border: "1px solid #E0E0E0",
+                  backgroundColor: thresholdColors[maxAlertThreshold?.interval],
+                }}
+              >
+                <Typography variant="subtitle1" align="center">
+                  {key}
+                </Typography>
+                <Typography variant="h5" align="center">
+                  {`${getThresholdForStation(
+                    maxThreshold,
+                    maxAlertThreshold,
+                    referenceVariables
+                  )} ans (${formatIncrementText(maxThreshold)})`}
+                </Typography>
+                <Typography variant="body2" align="center">
+                  {`${maxAlertThreshold?.data.toFixed(2)} mm/h`}
+                </Typography>
+              </div>
+            );
+          })}
         </div>
         <br />
         <Typography variant="subtitle2">
@@ -219,9 +235,12 @@ class IdfAlert extends React.PureComponent {
                       }}
                     >
                       {getThresholdForStation(
+                        increment,
                         this.props.clientRainAlerts[key]?.alertThresholds?.[
                           increment
-                        ]
+                        ],
+                        this.props.clientRainAlerts[key]?.referenceData
+                          ?.referenceVariables
                       )}
                     </TableCell>
                   ))}
