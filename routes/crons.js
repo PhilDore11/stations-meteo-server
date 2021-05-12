@@ -42,7 +42,7 @@ const getReferenceStationQuery = `
 `;
 
 const getAllClients = `
-  SELECT * FROM clients;
+  SELECT * FROM clients WHERE id = 12;
 `;
 
 const getClientStations = `
@@ -136,6 +136,10 @@ const startAlertsCron = async () => {
               stationDataResults,
               ...(await checkRainAlerts(stationDataResults, station)),
             };
+
+            console.debug(
+              `ALERTS - ${client.name} - ${station.name} - Rain alerts ${clientRainAlerts[station.name]} ...`
+            );
           }
         }
 
