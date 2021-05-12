@@ -303,6 +303,14 @@ const shouldSendNewRainAlert = (
   newAlertMaxIntervals,
   latestAlertValues
 ) => {
+  console.debug(
+    `ALERTS - shouldSendNewRainAlert - latestAlertValues: ${JSON.stringify(
+      latestAlertValues,
+      null,
+      2
+    )}`
+  );
+
   const latestAlertMaxIntervals = latestAlertValues.map((value, index) =>
     getMaxIntervalFromData(value, referenceData[intervals[index]])
   );
