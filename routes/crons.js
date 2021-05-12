@@ -138,7 +138,13 @@ const startAlertsCron = async () => {
             };
 
             console.debug(
-              `ALERTS - ${client.name} - ${station.name} - Rain alerts ${clientRainAlerts[station.name]} ...`
+              `ALERTS - ${client.name} - ${
+                station.name
+              } - Rain alerts ${JSON.stringify(
+                clientRainAlerts[station.name],
+                null,
+                2
+              )} ...`
             );
           }
         }
