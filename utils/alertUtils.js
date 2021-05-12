@@ -4,7 +4,7 @@ const { getAdjustedIntensity } = require("./stationData");
 const idfIntervals = [5, 10, 15, 30, 60, 120, 360, 720, 1440];
 
 const getMaxIntervalFromData = (data, referenceData) => {
-  const maxInterval = 0;
+  let maxInterval = 0;
   forEach(referenceData, (referenceThreshold, referenceThresholdKey) => {
     if (data >= referenceThreshold) {
       maxInterval = parseInt(referenceThresholdKey);
