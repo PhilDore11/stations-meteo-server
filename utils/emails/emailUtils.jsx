@@ -83,9 +83,9 @@ module.exports = {
         const mailOptions = {
           from: "alerte-orage@jfsa-ftp.com",
           to: clientEmails,
-          subject: `${client.name} - Alerte de pluie - ${convertToDateTimeString(
-            alertDateTime
-          )}`,
+          subject: `${
+            client.name
+          } - Alerte de pluie - ${convertToDateTimeString(alertDateTime)}`,
           html: renderFullPage(html, css),
           text:
             "Une précipitation importante a été enregistrée lors des derniers 24h",

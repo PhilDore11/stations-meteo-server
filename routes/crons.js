@@ -262,11 +262,27 @@ const checkRainAlerts = async (stationDataResults, station) => {
       getReferenceStationQuery,
       [station.stationId]
     );
+    const referenceStationId = referenceDataResults[0]?.stationId;
     const referenceData = getReferenceIncrementalData(referenceDataResults);
+
+    // IDF constants
+    const averagesResults = await db.connection.query(
+      `SELECT * FROM idfAverages WHERE stationId = ? ORDER BY increment`,
+      [referenceStationId]
+    );
+    const averages = averagesResults.map((result) => result.value);
+
+    const standardDeviationsResults = await db.connection.query(
+      `SELECT * FROM idfStandardDeviations WHERE stationId = ? ORDER BY increment`,
+      [referenceStationId]
+    );
+    const standardDeviations = standardDeviationsResults.map(
+      (result) => result.value
+    );
 
     const alertThresholds = findAlertThresholds(incrementalData, referenceData);
 
-    return { referenceData, alertThresholds };
+    return { averages, standardDeviations, referenceData, alertThresholds };
   } catch (e) {
     console.error("Error", e);
   }

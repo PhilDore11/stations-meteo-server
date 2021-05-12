@@ -1,6 +1,8 @@
 import React from "react";
 import PropTypes from "prop-types";
 
+import { getThresholdFromData } from "../../alertUtils";
+
 import { maxBy, isEmpty } from "lodash";
 
 import Table from "@material-ui/core/Table";
@@ -13,8 +15,6 @@ import Paper from "@material-ui/core/Paper";
 import Typography from "@material-ui/core/Typography";
 import Button from "@material-ui/core/Button";
 
-import { Line } from "react-chartjs-2";
-
 import {
   blue,
   green,
@@ -23,7 +23,6 @@ import {
   deepOrange,
   grey,
   red,
-  purple,
 } from "@material-ui/core/colors";
 
 const increments = [5, 15, 30, 60, 120, 180, 360, 720, 1440];
@@ -44,62 +43,6 @@ const formatIncrementText = (increment) =>
     ? `${increment / 60} hr`
     : `${increment / 60} hrs`;
 
-const data = {
-  labels: [5, 10, 15, 30, 60, 120, 180, 360, 720, 1440],
-  datasets: [
-    {
-      label: "Station d'epuration",
-      fill: false,
-      lineTension: 0.1,
-      backgroundColor: grey[800],
-      pointRadius: 1,
-      data: [0, 2, 2, 10, 5, 2, 2, 0, 10, 5],
-    },
-    ...thresholds.map((threshold) => ({
-      label: `HIDE ${threshold}`,
-      data: increments.map((increment) => threshold),
-      pointRadius: 1,
-      backgroundColor: thresholdColors[threshold],
-      borderColor: thresholdColors[threshold],
-    })),
-  ],
-};
-
-// const options = {
-//   maintainAspectRatio: false,
-
-//   legend: {
-//     labels: {
-//       filter: (item) => !item.text.startsWith("HIDE"),
-//     },
-//   },
-//   scales: {
-//     xAxes: [
-//       {
-//         ticks: {
-//           min: 0,
-//           max: 1440,
-//           callback: (value, index) => formatIncrementText(value),
-//         },
-//       },
-//     ],
-//     yAxes: [
-//       {
-//         scaleLabel: {
-//           display: true,
-//           labelString: "Periode de retour (ans)",
-//         },
-//         type: "logarithmic",
-//         ticks: {
-//           min: 1,
-//           max: 100,
-//           callback: (value) => Number(value.toString()),
-//         },
-//       },
-//     ],
-//   },
-// };
-
 class IdfAlert extends React.PureComponent {
   componentDidMount() {
     const chartCanvas = this.refs.chart;
@@ -112,31 +55,31 @@ class IdfAlert extends React.PureComponent {
     const getThresholdForStation = (
       increment,
       stationIncrementalAlertThresholds,
-      referenceVariables
+      averages,
+      standardDeviations
     ) => {
-      if (!stationIncrementalAlertThresholds) return "-";
+      if (!stationIncrementalAlertThresholds) return null;
 
-      const data = stationIncrementalAlertThresholds?.data * (increment / 60);
-      const { a, b, c } = referenceVariables[
-        stationIncrementalAlertThresholds?.interval
-      ];
-
-      return (
-        (-(b * Math.pow(data, 1 / c)) + Math.pow(a, 1 / c)) /
-        Math.pow(data, 1 / c)
-      ).toFixed(2);
+      return getThresholdFromData(
+        stationIncrementalAlertThresholds?.data,
+        increment,
+        averages,
+        standardDeviations
+      );
     };
 
     const getMaxThresholdForStation = (
       stationAlertThresholds,
-      referenceVariables
+      averages,
+      standardDeviations
     ) =>
       maxBy(Object.keys(stationAlertThresholds), (increment) =>
         parseFloat(
           getThresholdForStation(
             increment,
             stationAlertThresholds?.[increment],
-            referenceVariables
+            averages,
+            standardDeviations
           )
         )
       );
@@ -159,12 +102,14 @@ class IdfAlert extends React.PureComponent {
 
             if (isEmpty(alertThresholds)) return null;
 
-            const referenceVariables = this.props.clientRainAlerts[key]
-              ?.referenceData?.referenceVariables;
+            const averages = this.props.clientRainAlerts[key]?.averages;
+            const standardDeviations = this.props.clientRainAlerts[key]
+              ?.standardDeviations;
 
             const maxThreshold = getMaxThresholdForStation(
               alertThresholds,
-              referenceVariables
+              averages,
+              standardDeviations
             );
 
             const maxAlertThreshold = alertThresholds[maxThreshold];
@@ -184,11 +129,14 @@ class IdfAlert extends React.PureComponent {
                   {key}
                 </Typography>
                 <Typography variant="h5" align="center">
-                  {`${getThresholdForStation(
-                    maxThreshold,
-                    maxAlertThreshold,
-                    referenceVariables
-                  )} ans (${formatIncrementText(maxThreshold)})`}
+                  {`${
+                    getThresholdForStation(
+                      maxThreshold,
+                      maxAlertThreshold,
+                      averages,
+                      standardDeviations
+                    )?.toFixed(2) || "-"
+                  } ans (${formatIncrementText(maxThreshold)})`}
                 </Typography>
                 <Typography variant="body2" align="center">
                   {`${maxAlertThreshold?.data.toFixed(2)} mm/h`}
@@ -239,9 +187,9 @@ class IdfAlert extends React.PureComponent {
                         this.props.clientRainAlerts[key]?.alertThresholds?.[
                           increment
                         ],
-                        this.props.clientRainAlerts[key]?.referenceData
-                          ?.referenceVariables
-                      )}
+                        this.props.clientRainAlerts[key]?.averages,
+                        this.props.clientRainAlerts[key]?.standardDeviations
+                      )?.toFixed(2) || "-"}
                     </TableCell>
                   ))}
                 </TableRow>

@@ -1,7 +1,7 @@
 const { forEach, reduce, isEmpty } = require("lodash");
 const { getAdjustedIntensity } = require("./stationData");
 
-const idfIntervals = [5, 10, 15, 30, 60, 120, 180, 360, 720, 1440];
+const idfIntervals = [5, 10, 15, 30, 60, 120, 360, 720, 1440];
 
 const getMaxIntervalFromData = (data, referenceData) => {
   const maxInterval = 0;
@@ -32,16 +32,7 @@ const getIncrementalData = (stationData) => {
 };
 
 const getReferenceIncrementalData = (referenceData) => {
-  const referenceVariables = {};
-  referenceData.forEach((data) => {
-    referenceVariables[data.interval] = {
-      a: data.a,
-      b: data.b,
-      c: data.c,
-    };
-  });
-
-  const result = { referenceVariables };
+  const result = {};
 
   forEach(idfIntervals, (increment) => {
     const incrementResult = {};
@@ -74,9 +65,38 @@ const findAlertThresholds = (incrementalData, referenceIncrementalData) => {
   return result;
 };
 
+const GUMBEL_COEFFICIENT = 0.5772;
+const getThresholdFromData = (
+  data,
+  increment,
+  averages,
+  standardDeviations
+) => {
+  const intervalIndex = idfIntervals.findIndex(
+    (interval) => interval == increment
+  );
+
+  return (
+    1 /
+    (1 -
+      Math.exp(
+        -Math.exp(
+          -(
+            GUMBEL_COEFFICIENT +
+            (Math.PI *
+              ((data / (60 / increment) - averages[intervalIndex]) /
+                standardDeviations[intervalIndex])) /
+              Math.pow(6, 0.5)
+          )
+        )
+      ))
+  );
+};
+
 module.exports = {
   getMaxIntervalFromData,
   getIncrementalData,
   getReferenceIncrementalData,
   findAlertThresholds,
+  getThresholdFromData,
 };
