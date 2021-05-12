@@ -141,7 +141,7 @@ const startAlertsCron = async () => {
               `ALERTS - ${client.name} - ${
                 station.name
               } - Rain alerts ${JSON.stringify(
-                clientRainAlerts[station.name],
+                clientRainAlerts[station.name].alertThresholds,
                 null,
                 2
               )} ...`
