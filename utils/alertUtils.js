@@ -1,6 +1,11 @@
 const { forEach, reduce, isEmpty } = require("lodash");
 const { getAdjustedIntensity } = require("./stationData");
 
+// add timestamps in front of log messages
+require("console-stamp")(console, {
+  format: ":date(yyyy/mm/dd HH:MM:ss.l) :label",
+});
+
 const idfIntervals = [5, 10, 15, 30, 60, 120, 360, 720, 1440];
 
 const getMaxIntervalFromData = (data, referenceData) => {
@@ -54,6 +59,14 @@ const findAlertThresholds = (incrementalData, referenceIncrementalData) => {
       data,
       referenceIncrementalData[dataKey]
     );
+
+    console.debug(
+      "ALERT UTILS - findAlertThresholds",
+      dataKey,
+      maxInterval,
+      referenceData
+    );
+
     if (maxInterval > 0) {
       result[dataKey] = {
         data,
