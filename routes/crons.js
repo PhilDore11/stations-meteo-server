@@ -209,7 +209,7 @@ const startAlertsCron = async () => {
               shouldSendNewRainAlert(
                 clientRainAlert.referenceData,
                 alertRowMaxIntervals,
-                lastAlertRowValues
+                lastAlertRow
               )
             ) {
               console.debug(`ALERTS - ${client.name} - New Alert ...`);
@@ -305,6 +305,21 @@ const shouldSendNewRainAlert = (
 ) => {
   const latestAlertMaxIntervals = latestAlertValues.map((value, index) =>
     getMaxIntervalFromData(value, referenceData[intervals[index]])
+  );
+
+  console.debug(
+    `ALERTS - shouldSendNewRainAlert - newAlertMaxIntervals: ${JSON.stringify(
+      newAlertMaxIntervals,
+      null,
+      2
+    )}`
+  );
+  console.debug(
+    `ALERTS - shouldSendNewRainAlert - latestAlertMaxIntervals: ${JSON.stringify(
+      latestAlertMaxIntervals,
+      null,
+      2
+    )}`
   );
 
   return !isEqual(newAlertMaxIntervals, latestAlertMaxIntervals);
