@@ -1,4 +1,4 @@
-const { forEach, reduce, isEmpty } = require("lodash");
+const { forEach, reduce, isEmpty, isEqual } = require("lodash");
 const { getAdjustedIntensity } = require("./stationData");
 
 const idfIntervals = [5, 10, 15, 30, 60, 120, 360, 720, 1440];
@@ -95,10 +95,23 @@ const getThresholdFromData = (
   );
 };
 
+const shouldSendNewRainAlert = (
+  referenceData,
+  newAlertMaxIntervals,
+  latestAlertValues
+) => {
+  const latestAlertMaxIntervals = latestAlertValues.map((value, index) =>
+    getMaxIntervalFromData(value, referenceData[idfIntervals[index]])
+  );
+
+  return !isEqual(newAlertMaxIntervals, latestAlertMaxIntervals);
+};
+
 module.exports = {
   getMaxIntervalFromData,
   getIncrementalData,
   getReferenceIncrementalData,
   findAlertThresholds,
   getThresholdFromData,
+  shouldSendNewRainAlert,
 };

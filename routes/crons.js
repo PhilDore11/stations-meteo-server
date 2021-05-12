@@ -5,7 +5,7 @@ require("console-stamp")(console, {
   format: ":date(yyyy/mm/dd HH:MM:ss.l) :label",
 });
 
-const { some, forEach, isEmpty, isEqual } = require("lodash");
+const { some, forEach, isEmpty } = require("lodash");
 
 const db = require("../utils/db");
 
@@ -15,6 +15,7 @@ const {
   getReferenceIncrementalData,
   findAlertThresholds,
   getMaxIntervalFromData,
+  shouldSendNewRainAlert,
 } = require("../utils/alertUtils");
 const { sendRainEmail } = require("../utils/emails/emailUtils.jsx");
 const { logger } = require("../utils/logger");
@@ -189,27 +190,21 @@ const startAlertsCron = async () => {
             );
 
             // Retrieve latest alert
-            const lastAlertRow = await db.connection.query(
-              getLastStationAlert,
-              [clientRainAlert.id]
-            );
+            const lastAlertRow = (
+              await db.connection.query(getLastStationAlert, [
+                clientRainAlert.id,
+              ])
+            )[0];
+
             const lastAlertRowValues = intervals.map(
-              (increment) =>
-                (lastAlertRow[increment] && lastAlertRow[increment].data) || 0
-            );
-            console.debug(
-              `ALERTS - ${client.name} - Latest Alert - ${JSON.stringify(
-                lastAlertRow,
-                null,
-                2
-              )}`
+              (increment) => lastAlertRow[increment] || 0
             );
 
             if (
               shouldSendNewRainAlert(
                 clientRainAlert.referenceData,
                 alertRowMaxIntervals,
-                lastAlertRow
+                lastAlertRowValues
               )
             ) {
               console.debug(`ALERTS - ${client.name} - New Alert ...`);
@@ -296,41 +291,6 @@ const checkRainAlerts = async (stationDataResults, station) => {
   } catch (e) {
     console.error("Error", e);
   }
-};
-
-const shouldSendNewRainAlert = (
-  referenceData,
-  newAlertMaxIntervals,
-  latestAlertValues
-) => {
-  console.debug(
-    `ALERTS - shouldSendNewRainAlert - latestAlertValues: ${JSON.stringify(
-      latestAlertValues,
-      null,
-      2
-    )}`
-  );
-
-  const latestAlertMaxIntervals = latestAlertValues.map((value, index) =>
-    getMaxIntervalFromData(value, referenceData[intervals[index]])
-  );
-
-  console.debug(
-    `ALERTS - shouldSendNewRainAlert - newAlertMaxIntervals: ${JSON.stringify(
-      newAlertMaxIntervals,
-      null,
-      2
-    )}`
-  );
-  console.debug(
-    `ALERTS - shouldSendNewRainAlert - latestAlertMaxIntervals: ${JSON.stringify(
-      latestAlertMaxIntervals,
-      null,
-      2
-    )}`
-  );
-
-  return !isEqual(newAlertMaxIntervals, latestAlertMaxIntervals);
 };
 
 module.exports = {
