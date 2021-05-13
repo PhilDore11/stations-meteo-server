@@ -197,7 +197,7 @@ const startAlertsCron = async () => {
             )[0];
 
             const lastAlertRowValues = intervals.map(
-              (increment) => lastAlertRow[increment] || 0
+              (increment) => lastAlertRow && lastAlertRow[increment] || 0
             );
 
             if (
