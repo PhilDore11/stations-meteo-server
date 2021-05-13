@@ -25,7 +25,7 @@ import {
   red,
 } from "@material-ui/core/colors";
 
-const increments = [5, 15, 30, 60, 120, 180, 360, 720, 1440];
+const increments = [5, 10, 15, 30, 60, 120, 360, 720, 1440];
 const thresholds = [2, 5, 10, 25, 50, 100];
 const thresholdColors = {
   2: blue[200],

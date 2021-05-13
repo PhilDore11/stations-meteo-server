@@ -19,7 +19,6 @@ const largeTestDataResults = {
   30: 7.98,
   60: 6.384,
   120: 4.446,
-  180: 3.914,
   360: 2.527,
   720: 1.2635,
   1440: 0.637,
@@ -32,7 +31,6 @@ const xlargeTestDataResults = {
   30: 8.736,
   60: 7.384,
   120: 4.888,
-  180: 4.264,
   360: 2.739,
   720: 1.378,
   1440: 0.693,
@@ -50,7 +48,7 @@ describe("Station Data", () => {
   });
 
   describe("Test large data set", () => {
-    [5, 10, 15, 30, 60, 120, 180, 360, 720, 1440].forEach((increment) => {
+    [5, 10, 15, 30, 60, 120, 360, 720, 1440].forEach((increment) => {
       test(`should calculate ${increment} min mm/h`, () => {
         expect(
           stationDataUtil.getMaxStationData(largeTestData, increment)
@@ -60,7 +58,7 @@ describe("Station Data", () => {
   });
 
   describe("Test xlarge data set", () => {
-    [5, 10, 15, 30, 60, 120, 180, 360, 720, 1440].forEach((increment) => {
+    [5, 10, 15, 30, 60, 120, 360, 720, 1440].forEach((increment) => {
       test(`should calculate ${increment} min mm/h`, () => {
         expect(
           stationDataUtil.getMaxStationData(xlargeTestData, increment)
