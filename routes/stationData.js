@@ -69,7 +69,7 @@ const getLatestStationDataQuery = `
 const exportQuery = (tableName, columns) => `
   SELECT ${tableName}.${columns["RecNum"]}, 
          ${tableName}.${columns["TmStamp"]}, 
-         ${columns["Pluie_mm_Tot"]}, 
+         ${tableName}.${columns["Pluie_mm_Tot"]}, 
          Pluie_mm_Validee, 
          Coefficient
   FROM   ${tableName} 
@@ -77,7 +77,8 @@ const exportQuery = (tableName, columns) => `
             ON stationId = ? AND 
               ${tableName}.${columns["RecNum"]} = stationData.RecNum AND 
               ${tableName}.${columns["TmStamp"]} = stationData.TmStamp 
-  WHERE  ${tableName}.${columns["TmStamp"]} BETWEEN ? AND ? 
+  WHERE  ${tableName}.${columns["Pluie_mm_Tot"]} IS NOT NULL AND
+         ${tableName}.${columns["TmStamp"]} BETWEEN ? AND ? 
   ORDER  BY ${tableName}.${columns["TmStamp"]} 
   `;
 
@@ -215,24 +216,26 @@ module.exports = {
 
       const exportFilename = `/tmp/${dbTableName}-${filenameStart}-${filenameEnd}.csv`;
 
+      const jsonData = stationDataResults.map((result) => ({
+        stationId,
+        RecNum: result.RecNum,
+        TmStamp: dateUtils.convertToDateTimeString(result.TmStamp),
+        Pluie_mm_Tot: isNumber(result.Pluie_mm_Tot)
+          ? result.Pluie_mm_Tot.toString()
+          : "",
+        Pluie_mm_Validee: isNumber(result.Pluie_mm_Validee)
+          ? result.Pluie_mm_Validee.toString()
+          : "",
+        Coefficient: isNumber(result.Coefficient)
+          ? result.Coefficient.toString()
+          : stationCoefficientsResults.find(
+              (stationCoefficient) =>
+                stationCoefficient.dateModified <= result.TmStamp
+            )?.coefficient,
+      }));
+
       converter.json2csv(
-        stationDataResults.map((result) => ({
-          stationId,
-          RecNum: result.RecNum,
-          TmStamp: dateUtils.convertToDateTimeString(result.TmStamp),
-          Pluie_mm_Tot: isNumber(result.Pluie_mm_Tot)
-            ? result.Pluie_mm_Tot.toString()
-            : "",
-          Pluie_mm_Validee: isNumber(result.Pluie_mm_Validee)
-            ? result.Pluie_mm_Validee.toString()
-            : "",
-          Coefficient: isNumber(result.Coefficient)
-            ? result.Coefficient.toString()
-            : stationCoefficientsResults.find(
-                (stationCoefficient) =>
-                  stationCoefficient.dateModified <= result.TmStamp
-              )?.coefficient,
-        })),
+        jsonData,
         (err, csv) => {
           if (err) {
             return next(err);
@@ -257,7 +260,6 @@ module.exports = {
     const { stationId } = req.params;
 
     const file = req.files.file;
-    console.log("file", file, file.data.toString());
 
     converter.csv2json(
       file.data.toString(),
@@ -290,13 +292,6 @@ module.exports = {
           )
           .filter(Boolean);
 
-        // const dates = values.map((value) => ({
-        //   date: value[2],
-        //   dateFormatted: convertToDateTimeString(value[2]),
-        // }));
-        // console.log("IMPORT - values", values);
-        // console.log("IMPORT - DATES", dates);
-
         try {
           const {
             stationTableMeta,
@@ -324,7 +319,7 @@ module.exports = {
         }
       },
       {
-        // delimiter: { eol: "\r\n", },
+        delimiter: { eol: "\r\n" },
         trimHeaderFields: true,
         trimFieldValues: true,
         fields: [
