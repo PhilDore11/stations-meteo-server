@@ -1,10 +1,12 @@
 const db = require("../utils/db");
 
 module.exports = {
-  get: (req, res, next) => {
+  get: async (req, res, next) => {
     const { clientId } = req.params;
-    db.connection.query(
-      `
+
+    try {
+      const results = await db.connection.query(
+        `
       SELECT 
         LNDBStationMeta.stationID as id, 
         LNDBStationMeta.lnStationName as name,
@@ -12,12 +14,11 @@ module.exports = {
       FROM LNDBStationMeta 
       LEFT JOIN stations ON LNDBStationMeta.stationID = stations.stationId 
       `,
-      clientId,
-      (err, results) => {
-        if (err) return next(err.sqlMessage);
-
-        res.json(results);
-      }
-    );
+        clientId
+      );
+      return res.json(results);
+    } catch (err) {
+      return next(err.sqlMessage);
+    }
   },
 };

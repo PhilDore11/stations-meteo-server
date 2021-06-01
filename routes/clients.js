@@ -34,62 +34,66 @@ const getStationsQuery = `
   WHERE  clientid = ?;`;
 
 module.exports = {
-  post: (req, res, next) => {
+  post: async (req, res, next) => {
     const { name } = req.body;
 
-    db.connection.query(
-      "INSERT INTO clients (name) VALUES (?)",
-      [name],
-      (clientsErr, results) => {
-        if (clientsErr) return next(clientsErr.sqlMessage);
-
-        res.status(200).send(results);
-      }
-    );
-  },
-  put: (req, res, next) => {
-    const { clientId } = req.params;
-    const clientData = _.omit(req.body, "stations");
-    db.connection.query(
-      `UPDATE clients SET ? WHERE id=${clientId}`,
-      clientData,
-      (err) => {
-        if (err) return next(err.sqlMessage);
-
-        res.status(200).send({});
-      }
-    );
-  },
-  get: (req, res, next) => {
-    const clientIds = req.query.id;
-    if (clientIds && clientIds.length > 0) {
-      db.connection.query(getClientsQuery, [req.query.id], (err, results) => {
-        if (err) return next(err.sqlMessage);
-
-        res.json(results);
-      });
-    } else {
-      db.connection.query(getAllClientsQuery, null, (err, results) => {
-        if (err) return next(err.sqlMessage);
-
-        res.json(results);
-      });
+    try {
+      const results = db.connection.query(
+        "INSERT INTO clients (name) VALUES (?)",
+        [name]
+      );
+      return res.status(200).send(results);
+    } catch (err) {
+      return next(clientsErr.sqlMessage);
     }
   },
-  getStations: (req, res, next) => {
-    const { clientId } = req.params;
-    db.connection.query(getStationsQuery, clientId, (err, results) => {
-      if (err) return next(err.sqlMessage);
 
-      res.json(results);
-    });
+  put: async (req, res, next) => {
+    const { clientId } = req.params;
+    const clientData = _.omit(req.body, "stations");
+    try {
+      db.connection.query(
+        `UPDATE clients SET ? WHERE id=${clientId}`,
+        clientData
+      );
+      return res.status(200).send({});
+    } catch (err) {
+      return next(err.sqlMessage);
+    }
   },
-  delete: (req, res, next) => {
-    const { clientId } = req.params;
-    db.connection.query("DELETE from clients WHERE id=?", clientId, (err) => {
-      if (err) return next(err.sqlMessage);
 
-      res.status(200).send({});
-    });
+  get: async (req, res, next) => {
+    const clientIds = req.query.id;
+    try {
+      const results =
+        clientIds && clientIds.length > 0
+          ? await db.connection.query(getClientsQuery, [req.query.id])
+          : await db.connection.query(getAllClientsQuery);
+      return res.json(results);
+    } catch (err) {
+      return next(err.sqlMessage);
+    }
+  },
+
+  getStations: async (req, res, next) => {
+    const { clientId } = req.params;
+
+    try {
+      const results = await db.connection.query(getStationsQuery, clientId);
+      return res.json(results);
+    } catch (err) {
+      return next(err.sqlMessage);
+    }
+  },
+
+  delete: async (req, res, next) => {
+    const { clientId } = req.params;
+
+    try {
+      await db.connection.query("DELETE from clients WHERE id=?", clientId);
+      return res.status(200).send({});
+    } catch (err) {
+      return next(err.sqlMessage);
+    }
   },
 };

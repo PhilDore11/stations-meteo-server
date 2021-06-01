@@ -1,7 +1,7 @@
 const db = require("../utils/db");
 
 module.exports = {
-  post: (req, res, next) => {
+  post: async (req, res, next) => {
     const {
       clientId,
       stationId,
@@ -22,58 +22,61 @@ module.exports = {
       postalCode,
     } = req.body;
 
-    db.connection.query(
-      "INSERT INTO stations (clientId, stationId, name, referenceStationId, latitude, longitude, ipAddress, deviceType, hasRain, hasSnow, hasWind, hasHydro, localisation, address, city, province, postalCode) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-      [
-        clientId,
-        stationId,
-        name,
-        referenceStationId,
-        latitude,
-        longitude,
-        ipAddress,
-        deviceType,
-        hasRain,
-        hasSnow,
-        hasWind,
-        hasHydro,
-        localisation,
-        address,
-        city,
-        province,
-        postalCode,
-      ],
-      (clientsErr, results) => {
-        if (clientsErr) return next(clientsErr.sqlMessage);
-
-        res.status(200).send(results);
-      }
-    );
+    try {
+      const results = await db.connection.query(
+        "INSERT INTO stations (clientId, stationId, name, referenceStationId, latitude, longitude, ipAddress, deviceType, hasRain, hasSnow, hasWind, hasHydro, localisation, address, city, province, postalCode) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        [
+          clientId,
+          stationId,
+          name,
+          referenceStationId,
+          latitude,
+          longitude,
+          ipAddress,
+          deviceType,
+          hasRain,
+          hasSnow,
+          hasWind,
+          hasHydro,
+          localisation,
+          address,
+          city,
+          province,
+          postalCode,
+        ]
+      );
+      return res.status(200).send(results);
+    } catch (err) {
+      return next(err.sqlMessage);
+    }
   },
-  put: (req, res, next) => {
+
+  put: async (req, res, next) => {
     const { stationId } = req.params;
 
-    db.connection.query(
-      `UPDATE stations SET ? WHERE id=${stationId}`,
-      req.body,
-      (err) => {
-        if (err) return next(err.sqlMessage);
-
-        res.status(200).send({});
-      }
-    );
+    try {
+      await db.connection.query(
+        `UPDATE stations SET ? WHERE id=${stationId}`,
+        req.body
+      );
+      return res.status(200).send({});
+    } catch (err) {
+      return next(err.sqlMessage);
+    }
   },
-  delete: (req, res, next) => {
+
+  delete: async (req, res, next) => {
     const { stationId } = req.params;
 
-    db.connection.query(
-      "DELETE from stations WHERE id=?",
-      [stationId],
-      (err, results) => {
-        if (err) return next(err.sqlMessage);
+    try {
+      const results = await db.connection.query(
+        "DELETE from stations WHERE id=?",
+        [stationId]
+      );
 
-        res.status(200).send(results);
-      }
-    );
+      return res.status(200).send(results);
+    } catch (err) {
+      return next(err.sqlMessage);
+    }
   },
 };

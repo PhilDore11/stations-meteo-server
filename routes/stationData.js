@@ -1,58 +1,61 @@
 const fs = require("fs");
-const { every, isNumber } = require("lodash");
+const { every, forEach, isNumber } = require("lodash");
 
 const converter = require("json-2-csv");
 
 const db = require("../utils/db");
 const stationData = require("../utils/stationData");
 const dateUtils = require("../utils/dateUtils");
-const { getStationTableNameQuery } = require("../utils/stationTableUtils");
+const { getStationTableMeta } = require("../utils/stationTableUtils");
+const { convertToDateTimeString } = require("../utils/dateUtils");
 
-const getGroupByClauses = (view, tableName) => {
+const getGroupByClauses = (view, tableName, columns) => {
   switch (view) {
     case "day":
       return [
-        `YEAR(${tableName}.TmStamp)`,
-        `MONTH(${tableName}.TmStamp)`,
-        `DAY(${tableName}.TmStamp)`,
-        `HOUR(${tableName}.TmStamp)`,
-        `MINUTE(${tableName}.TmStamp)`,
+        `YEAR(${tableName}.${columns["TmStamp"]})`,
+        `MONTH(${tableName}.${columns["TmStamp"]})`,
+        `DAY(${tableName}.${columns["TmStamp"]})`,
+        `HOUR(${tableName}.${columns["TmStamp"]})`,
+        `MINUTE(${tableName}.${columns["TmStamp"]})`,
       ];
     case "week":
       return [
-        `YEAR(${tableName}.TmStamp)`,
-        `MONTH(${tableName}.TmStamp)`,
-        `DAY(${tableName}.TmStamp)`,
-        `HOUR(${tableName}.TmStamp)`,
+        `YEAR(${tableName}.${columns["TmStamp"]})`,
+        `MONTH(${tableName}.${columns["TmStamp"]})`,
+        `DAY(${tableName}.${columns["TmStamp"]})`,
+        `HOUR(${tableName}.${columns["TmStamp"]})`,
       ];
     default:
       return [
-        `YEAR(${tableName}.TmStamp)`,
-        `MONTH(${tableName}.TmStamp)`,
-        `DAY(${tableName}.TmStamp)`,
+        `YEAR(${tableName}.${columns["TmStamp"]})`,
+        `MONTH(${tableName}.${columns["TmStamp"]})`,
+        `DAY(${tableName}.${columns["TmStamp"]})`,
       ];
   }
 };
 
-const getQuery = (view, tableName) => `
-  SELECT Min(${tableName}.TmStamp)     AS stationDate, 
-         Pluie_mm_Tot     AS intensity, 
-         Pluie_mm_Validee AS adjustedIntensity, 
-         Coefficient      AS coefficient 
+const getQuery = (view, tableName, columns) => `
+  SELECT Min(${tableName}.${columns["TmStamp"]})  AS stationDate, 
+         ${columns["Pluie_mm_Tot"]}               AS intensity, 
+         Pluie_mm_Validee                         AS adjustedIntensity, 
+         Coefficient                              AS coefficient 
   FROM   ${tableName} 
          LEFT JOIN stationData 
-              ON stationId = ? AND ${tableName}.RecNum = stationData.RecNum AND ${tableName}.TmStamp = stationData.TmStamp
-  WHERE  ${tableName}.TmStamp BETWEEN ? AND ? 
-  GROUP BY ${getGroupByClauses(view, tableName)}
+              ON stationId = ? AND 
+              ${tableName}.${columns["TmStamp"]} = stationData.RecNum AND 
+              ${tableName}.${columns["TmStamp"]} = stationData.TmStamp
+  WHERE  ${tableName}.${columns["TmStamp"]} BETWEEN ? AND ? 
+  GROUP BY ${getGroupByClauses(view, tableName, columns)}
 `;
 
-const getLatestQuery = (tableName) => `
-  SELECT TmStamp          AS date,
-         RecNum,
-         Pluie_mm_Tot     AS intensity, 
-         batt_volt        AS battery
+const getLatestQuery = (tableName, columns) => `
+  SELECT ${columns["TmStamp"]}      AS date,
+         ${columns["TmStamp"]}      AS RecNum,
+         ${columns["Pluie_mm_Tot"]} AS intensity, 
+         ${columns["batt_volt"]}    AS battery
   FROM ${tableName} 
-  ORDER  BY TmStamp DESC 
+  ORDER  BY ${columns["TmStamp"]} DESC 
   LIMIT  1
 `;
 
@@ -63,32 +66,34 @@ const getLatestStationDataQuery = `
   WHERE stationId = ? AND RecNum = ?
 `;
 
-const exportQuery = (tableName) => `
-  SELECT ${tableName}.RecNum, 
-         ${tableName}.TmStamp, 
-         Pluie_mm_Tot, 
+const exportQuery = (tableName, columns) => `
+  SELECT ${tableName}.${columns["RecNum"]}, 
+         ${tableName}.${columns["TmStamp"]}, 
+         ${columns["Pluie_mm_Tot"]}, 
          Pluie_mm_Validee, 
          Coefficient
   FROM   ${tableName} 
          LEFT JOIN stationData 
-              ON stationId = ? AND ${tableName}.RecNum = stationData.RecNum AND ${tableName}.TmStamp = stationData.TmStamp 
-  WHERE  ${tableName}.TmStamp BETWEEN ? AND ? 
-  ORDER  BY ${tableName}.TmStamp 
+            ON stationId = ? AND 
+              ${tableName}.${columns["RecNum"]} = stationData.RecNum AND 
+              ${tableName}.${columns["TmStamp"]} = stationData.TmStamp 
+  WHERE  ${tableName}.${columns["TmStamp"]} BETWEEN ? AND ? 
+  ORDER  BY ${tableName}.${columns["TmStamp"]} 
   `;
 
 const getStationCoefficients = `
   SELECT * FROM stationCoefficients WHERE stationId = ? AND dateModified < ? ORDER BY dateModified DESC;
 `;
 
-const insertMissingResultsQuery = (tableName) => `
-  INSERT INTO ${tableName} (TmStamp, RecNum) 
+const insertMissingResultsQuery = (tableName, columns) => `
+  INSERT INTO ${tableName} (${columns["TmStamp"]}, ${columns["RecNum"]}) 
   SELECT  stationData.TmStamp, 
           stationData.RecNum 
   FROM    ${tableName} 
           RIGHT JOIN stationData 
-              ON ${tableName}.RecNum = stationData.RecNum 
-                  AND ${tableName}.TmStamp = stationData.TmStamp 
-  WHERE   stationId = ? AND ${tableName}.RecNum IS NULL 
+              ON ${tableName}.${columns["RecNum"]} = stationData.RecNum 
+                  AND ${tableName}.${columns["TmStamp"]} = stationData.TmStamp 
+  WHERE   stationId = ? AND ${tableName}.${columns["RecNum"]} IS NULL 
 `;
 
 const insertValidatedResultsQuery = `
@@ -99,173 +104,164 @@ const insertValidatedResultsQuery = `
       Coefficient = VALUES (Coefficient)
 `;
 
+const getColumnsFromMeta = (stationColumnMeta) => {
+  const columns = {};
+
+  forEach(stationColumnMeta, (columnMeta) => {
+    columns[columnMeta.lnColumnName] = columnMeta.dbColumnName;
+  });
+
+  return columns;
+};
+
 module.exports = {
-  get: (req, res, next) => {
+  get: async (req, res, next) => {
     const { stationId } = req.params;
     const { start, end, view } = req.query;
 
     const queryStart = dateUtils.convertToDateTimeString(start);
     const queryEnd = dateUtils.convertToDateTimeString(end);
 
-    db.connection.query(
-      getStationTableNameQuery,
-      [stationId],
-      (err, tableNameResults) => {
-        if (err) return next(err.sqlMessage);
+    try {
+      const { stationTableMeta, stationColumnMeta } = await getStationTableMeta(
+        stationId
+      );
+      const stationDataResults = await db.connection.query(
+        getQuery(
+          view,
+          stationTableMeta.dbTableName,
+          getColumnsFromMeta(stationColumnMeta)
+        ),
+        [stationId, queryStart, queryEnd]
+      );
 
-        db.connection.query(
-          getQuery(view, tableNameResults[0].dbTableName),
-          [stationId, queryStart, queryEnd],
-          (err, stationDataResults) => {
-            if (err) {
-              return next(err.sqlMessage);
-            }
-
-            res.json({
-              validated: every(stationDataResults, (result) =>
-                isNumber(result.adjustedIntensity)
-              ),
-              data: stationDataResults.map((dataResult) => ({
-                ...dataResult,
-                intensity: stationData.getAdjustedIntensity(dataResult),
-              })),
-            });
-          }
-        );
-      }
-    );
+      res.json({
+        validated: every(stationDataResults, (result) =>
+          isNumber(result.adjustedIntensity)
+        ),
+        data: stationDataResults.map((dataResult) => ({
+          ...dataResult,
+          intensity: stationData.getAdjustedIntensity(dataResult),
+        })),
+      });
+    } catch (err) {
+      return next(err.sqlMessage);
+    }
   },
-  getLatest: (req, res, next) => {
+
+  getLatest: async (req, res, next) => {
     const { stationId } = req.params;
 
-    db.connection.query(
-      getStationTableNameQuery,
-      [stationId],
-      (err, tableNameResults) => {
-        if (err) return next(err.sqlMessage);
+    try {
+      const { stationTableMeta, stationColumnMeta } = await getStationTableMeta(
+        stationId
+      );
+      if (!stationTableMeta) return res.json({});
 
-        if (!tableNameResults || tableNameResults.length === 0)
-          return res.json({});
+      const columns = getColumnsFromMeta(stationColumnMeta);
 
-        db.connection.query(
-          getLatestQuery(tableNameResults[0].dbTableName),
-          [],
-          (err, latestResults) => {
-            if (err) return next(err.sqlMessage);
+      const latestResults = await db.connection.query(
+        getLatestQuery(stationTableMeta.dbTableName, columns)
+      );
+      const latestStationResults = await db.connection.query(
+        getLatestStationDataQuery,
+        [stationId, latestResults[0].RecNum]
+      );
 
-            db.connection.query(
-              getLatestStationDataQuery,
-              [stationId, latestResults[0].RecNum],
-              (err, latestStationResults) => {
-                if (err) return next(err.sqlMessage);
+      const result =
+        latestResults && latestResults.length > 0 && latestResults[0];
+      const stationResult =
+        latestStationResults &&
+        latestStationResults.length > 0 &&
+        latestStationResults[0];
 
-                const result =
-                  latestResults && latestResults.length > 0 && latestResults[0];
-                const stationResult =
-                  latestStationResults &&
-                  latestStationResults.length > 0 &&
-                  latestStationResults[0];
-
-                res.json({
-                  ...result,
-                  intensity: stationData.getAdjustedIntensity({
-                    ...result,
-                    ...stationResult,
-                  }),
-                });
-              }
-            );
-          }
-        );
-      }
-    );
+      res.json({
+        ...result,
+        intensity: stationData.getAdjustedIntensity({
+          ...result,
+          ...stationResult,
+        }),
+      });
+    } catch (err) {
+      return next(err.sqlMessage);
+    }
   },
 
-  export: (req, res, next) => {
+  export: async (req, res, next) => {
     const { stationId } = req.params;
     const { start, end } = req.query;
 
     const queryStart = dateUtils.convertToDateTimeString(start);
     const queryEnd = dateUtils.convertToDateTimeString(end);
 
-    db.connection.query(
-      getStationTableNameQuery,
-      [stationId],
-      (err, tableNameResults) => {
-        if (err) return next(err.sqlMessage);
+    try {
+      const { stationTableMeta, stationColumnMeta } = await getStationTableMeta(
+        stationId
+      );
+      const dbTableName = stationTableMeta.dbTableName;
 
-        const dbTableName = tableNameResults[0].dbTableName;
+      const stationDataResults = await db.connection.query(
+        exportQuery(dbTableName, getColumnsFromMeta(stationColumnMeta)),
+        [stationId, queryStart, queryEnd]
+      );
 
-        db.connection.query(
-          exportQuery(dbTableName),
-          [stationId, queryStart, queryEnd],
-          (err, stationDataResults) => {
+      const stationCoefficientsResults = await db.connection.query(
+        getStationCoefficients,
+        [stationId, queryEnd]
+      );
+
+      const filenameStart = dateUtils.convertToDateString(start);
+      const filenameEnd = dateUtils.convertToDateString(end);
+
+      const exportFilename = `/tmp/${dbTableName}-${filenameStart}-${filenameEnd}.csv`;
+
+      converter.json2csv(
+        stationDataResults.map((result) => ({
+          stationId,
+          RecNum: result.RecNum,
+          TmStamp: dateUtils.convertToDateTimeString(result.TmStamp),
+          Pluie_mm_Tot: isNumber(result.Pluie_mm_Tot)
+            ? result.Pluie_mm_Tot.toString()
+            : "",
+          Pluie_mm_Validee: isNumber(result.Pluie_mm_Validee)
+            ? result.Pluie_mm_Validee.toString()
+            : "",
+          Coefficient: isNumber(result.Coefficient)
+            ? result.Coefficient.toString()
+            : stationCoefficientsResults.find(
+                (stationCoefficient) =>
+                  stationCoefficient.dateModified <= result.TmStamp
+              )?.coefficient,
+        })),
+        (err, csv) => {
+          if (err) {
+            return next(err);
+          }
+
+          fs.writeFile(exportFilename, csv, (err) => {
             if (err) {
-              return next(err.sqlMessage);
+              return next(err);
             }
 
-            db.connection.query(
-              getStationCoefficients,
-              [stationId, queryEnd],
-              (err, stationCoefficientsResults) => {
-                if (err) {
-                  return next(err.sqlMessage);
-                }
-
-                const filenameStart = dateUtils.convertToDateString(start);
-                const filenameEnd = dateUtils.convertToDateString(end);
-
-                const exportFilename = `/tmp/${dbTableName}-${filenameStart}-${filenameEnd}.csv`;
-
-                converter.json2csv(
-                  stationDataResults.map((result) => ({
-                    stationId,
-                    RecNum: result.RecNum,
-                    TmStamp: dateUtils.convertToDateTimeString(result.TmStamp),
-                    Pluie_mm_Tot: isNumber(result.Pluie_mm_Tot)
-                      ? result.Pluie_mm_Tot.toString()
-                      : "",
-                    Pluie_mm_Validee: isNumber(result.Pluie_mm_Validee)
-                      ? result.Pluie_mm_Validee.toString()
-                      : "",
-                    Coefficient: isNumber(result.Coefficient)
-                      ? result.Coefficient.toString()
-                      : stationCoefficientsResults.find(
-                          (stationCoefficient) =>
-                            stationCoefficient.dateModified <= result.TmStamp
-                        )?.coefficient,
-                  })),
-                  (err, csv) => {
-                    if (err) {
-                      return next(err);
-                    }
-
-                    fs.writeFile(exportFilename, csv, (err) => {
-                      if (err) {
-                        return next(err);
-                      }
-
-                      res.download(exportFilename);
-                    });
-                  },
-                  { emptyFieldValue: "" }
-                );
-              }
-            );
-          }
-        );
-      }
-    );
+            res.download(exportFilename);
+          });
+        },
+        { emptyFieldValue: "" }
+      );
+    } catch (err) {
+      return next(err.sqlMessage);
+    }
   },
 
   import: (req, res, next) => {
     const { stationId } = req.params;
 
     const file = req.files.file;
+    console.log("file", file, file.data.toString());
 
     converter.csv2json(
       file.data.toString(),
-      (err, data) => {
+      async (err, data) => {
         if (err) {
           return next(err);
         }
@@ -294,43 +290,41 @@ module.exports = {
           )
           .filter(Boolean);
 
-        db.connection.query(
-          insertValidatedResultsQuery,
-          [values],
-          (err, importResults) => {
-            if (err) {
-              return next(err);
-            }
+        // const dates = values.map((value) => ({
+        //   date: value[2],
+        //   dateFormatted: convertToDateTimeString(value[2]),
+        // }));
+        // console.log("IMPORT - values", values);
+        // console.log("IMPORT - DATES", dates);
 
-            db.connection.query(
-              getStationTableNameQuery,
-              [stationId],
-              (err, tableNameResults) => {
-                if (err) return next(err.sqlMessage);
+        try {
+          const {
+            stationTableMeta,
+            stationColumnMeta,
+          } = await getStationTableMeta(stationId);
+          const importResults = await db.connection.query(
+            insertValidatedResultsQuery,
+            [values]
+          );
 
-                const dbTableName = tableNameResults[0].dbTableName;
+          const insertMissingResults = await db.connection.query(
+            insertMissingResultsQuery(
+              stationTableMeta.dbTableName,
+              getColumnsFromMeta(stationColumnMeta)
+            ),
+            [stationId]
+          );
 
-                db.connection.query(
-                  insertMissingResultsQuery(dbTableName),
-                  [stationId],
-                  (err, insertMissingResults) => {
-                    if (err) {
-                      return next(err);
-                    }
-
-                    res.json({
-                      importResults,
-                      insertMissingResults,
-                    });
-                  }
-                );
-              }
-            );
-          }
-        );
+          return res.json({
+            importResults,
+            insertMissingResults,
+          });
+        } catch (err) {
+          return next(err.sqlMessage);
+        }
       },
       {
-        delimiter: { eol: "\r\n" },
+        // delimiter: { eol: "\r\n", },
         trimHeaderFields: true,
         trimFieldValues: true,
         fields: [

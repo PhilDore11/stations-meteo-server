@@ -1,7 +1,7 @@
 const { isEmpty } = require("lodash");
 const db = require("./db");
 
-const getStationTableNameQuery = `
+const getStationTableMetaQuery = `
   SELECT * 
   FROM    LNDBStationMeta 
           JOIN LNDBTableMeta 
@@ -11,15 +11,33 @@ const getStationTableNameQuery = `
           AND stationId = ? 
 `;
 
+const getStationColumnMetaQuery = `
+  SELECT * FROM LNDBColumnMeta WHERE LNDBTableMeta_tableID = ? 
+`;
+
 module.exports = {
-  getStationTableNameQuery,
+  getStationTableMeta: async (stationId) => {
+    try {
+      const stationTableMetaResults = await db.connection.query(
+        getStationTableMetaQuery,
+        [stationId]
+      );
 
-  getStationTableName: async (stationId) => {
-    const lnTableNameResults = await db.connection.query(
-      getStationTableNameQuery,
-      [stationId]
-    );
+      if (!isEmpty(stationTableMetaResults)) {
+        const stationColumnMetaResults = await db.connection.query(
+          getStationColumnMetaQuery,
+          [stationTableMetaResults[0].tableID]
+        );
 
-    return !isEmpty(lnTableNameResults) && lnTableNameResults[0].dbTableName;
+        return {
+          stationTableMeta: stationTableMetaResults[0],
+          stationColumnMeta: stationColumnMetaResults,
+        };
+      } else {
+        return null;
+      }
+    } catch (err) {
+      return next(err.sqlMessage);
+    }
   },
 };

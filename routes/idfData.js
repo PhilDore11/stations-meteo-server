@@ -3,7 +3,7 @@ const _ = require("lodash");
 
 const stationDataUtils = require("../utils/stationData");
 const dateUtils = require("../utils/dateUtils");
-const { getStationTableNameQuery } = require("../utils/stationTableUtils");
+const { getStationTableMeta } = require("../utils/stationTableUtils");
 
 const getReferenceDataQuery = `
   SELECT 
@@ -37,62 +37,51 @@ const getStationDataQuery = (tableName) => `
 `;
 
 module.exports = {
-  getReferenceData: (req, res, next) => {
+  getReferenceData: async (req, res, next) => {
     const { stationId } = req.params;
 
-    db.connection.query(getReferenceDataQuery, [stationId], (err, results) => {
-      if (err) return next(err.sqlMessage);
-
-      res.json(results);
-    });
+    try {
+      const results = await db.connection.query(getReferenceDataQuery, [
+        stationId,
+      ]);
+      return res.json(results);
+    } catch (err) {
+      return next(err.sqlMessage);
+    }
   },
 
-  getStationData: (req, res, next) => {
+  getStationData: async (req, res, next) => {
     const { stationId } = req.params;
     const { start, end } = req.query;
 
     const queryStart = dateUtils.convertToDateTimeString(start);
     const queryEnd = dateUtils.convertToDateTimeString(end);
 
-    db.connection.query(
-      getStationTableNameQuery,
-      [stationId],
-      (err, tableNameResults) => {
-        if (err) return next(err.sqlMessage);
+    try {
+      const { stationTableMeta } = await getStationTableMeta(stationId);
 
-        db.connection.query(
-          getStationDataQuery(tableNameResults[0].dbTableName),
-          [stationId, queryStart, queryEnd],
-          (err, stationDataResults) => {
-            if (err) {
-              return next(err.sqlMessage);
-            }
-            let idfStationData = [];
+      const stationDataResults = await db.connection.query(
+        getStationDataQuery(stationTableMeta.dbTableName),
+        [stationId, queryStart, queryEnd]
+      );
 
-            if (!_.isEmpty(stationDataResults)) {
-              idfStationData = [
-                5,
-                10,
-                15,
-                30,
-                60,
-                120,
-                360,
-                720,
-                1440,
-              ].map((increment) => ({
-                increment,
-                intensity: stationDataUtils.getMaxStationData(
-                  stationDataResults,
-                  increment
-                ),
-              }));
-            }
+      let idfStationData = [];
 
-            res.json(idfStationData);
-          }
+      if (!_.isEmpty(stationDataResults)) {
+        idfStationData = [5, 10, 15, 30, 60, 120, 360, 720, 1440].map(
+          (increment) => ({
+            increment,
+            intensity: stationDataUtils.getMaxStationData(
+              stationDataResults,
+              increment
+            ),
+          })
         );
       }
-    );
+
+      return res.json(idfStationData);
+    } catch (err) {
+      return next(err.sqlMessage);
+    }
   },
 };

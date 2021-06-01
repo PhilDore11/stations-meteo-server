@@ -9,7 +9,7 @@ const { some, forEach, isEmpty } = require("lodash");
 
 const db = require("../utils/db");
 
-const { getStationTableName } = require("../utils/stationTableUtils");
+const { getStationTableMeta } = require("../utils/stationTableUtils");
 const {
   getIncrementalData,
   getReferenceIncrementalData,
@@ -94,9 +94,11 @@ const startAlertsCron = async () => {
           console.debug(
             `ALERTS - ${client.name} - ${station.name} - starting...`
           );
-          const stationTableName = await getStationTableName(station.stationId);
+          const { stationTableMeta } = await getStationTableMeta(
+            station.stationId
+          );
 
-          if (!stationTableName) {
+          if (!stationTableMeta) {
             console.warn(
               `Could not find table for station (${station.id}: ${station.name})`
             );
@@ -115,7 +117,7 @@ const startAlertsCron = async () => {
 
           // Station Data
           let stationDataResults = await db.connection.query(
-            getStationDataForAlertsQuery(stationTableName),
+            getStationDataForAlertsQuery(stationTableMeta.dbTableName),
             [station.stationId]
           );
 
@@ -197,7 +199,7 @@ const startAlertsCron = async () => {
             )[0];
 
             const lastAlertRowValues = intervals.map(
-              (increment) => lastAlertRow && lastAlertRow[increment] || 0
+              (increment) => (lastAlertRow && lastAlertRow[increment]) || 0
             );
 
             if (

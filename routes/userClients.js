@@ -1,44 +1,48 @@
 const db = require("../utils/db");
 
-const _ = require("lodash");
-
 module.exports = {
-  get: (req, res, next) => {
+  get: async (req, res, next) => {
     const { clientId } = req.params;
 
-    db.connection.query(
-      "SELECT userId, clientId FROM userClients JOIN users ON userClients.userId = users.id where clientId=? and users.admin=false;",
-      [clientId],
-      (err, results) => {
-        if (err) return next(err.sqlMessage);
+    try {
+      const results = await db.connection.query(
+        "SELECT userId, clientId FROM userClients JOIN users ON userClients.userId = users.id where clientId=? and users.admin=false;",
+        [clientId]
+      );
 
-        res.status(200).send(results);
-      }
-    );
+      return res.status(200).send(results);
+    } catch (err) {
+      return next(err.sqlMessage);
+    }
   },
-  post: (req, res, next) => {
+
+  post: async (req, res, next) => {
     const { userId, clientId } = req.body;
 
-    db.connection.query(
-      "INSERT INTO userClients (userId, clientId) VALUES (?, ?), (?, ?)",
-      [userId, clientId, 1, clientId],
-      (err, results) => {
-        if (err) return next(err.sqlMessage);
+    try {
+      const results = await db.connection.query(
+        "INSERT INTO userClients (userId, clientId) VALUES (?, ?), (?, ?)",
+        [userId, clientId, 1, clientId]
+      );
 
-        res.status(200).send(results);
-      }
-    );
+      return res.status(200).send(results);
+    } catch (err) {
+      return next(err.sqlMessage);
+    }
   },
-  delete: (req, res, next) => {
-    const { userId, clientId } = req.params;
-    db.connection.query(
-      "DELETE from userClients WHERE userId=? AND clientId=?",
-      [userId, clientId],
-      (err, results) => {
-        if (err) return next(err.sqlMessage);
 
-        res.status(200).send(results);
-      }
-    );
+  delete: async (req, res, next) => {
+    const { userId, clientId } = req.params;
+
+    try {
+      const results = await db.connection.query(
+        "DELETE from userClients WHERE userId=? AND clientId=?",
+        [userId, clientId]
+      );
+
+      return res.status(200).send(results);
+    } catch (err) {
+      return next(err.sqlMessage);
+    }
   },
 };
