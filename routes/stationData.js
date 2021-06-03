@@ -77,8 +77,7 @@ const exportQuery = (tableName, columns) => `
             ON stationId = ? AND 
               ${tableName}.${columns["RecNum"]} = stationData.RecNum AND 
               ${tableName}.${columns["TmStamp"]} = stationData.TmStamp 
-  WHERE  ${tableName}.${columns["Pluie_mm_Tot"]} IS NOT NULL AND
-         ${tableName}.${columns["TmStamp"]} BETWEEN ? AND ? 
+  WHERE  ${tableName}.${columns["TmStamp"]} BETWEEN ? AND ? 
   ORDER  BY ${tableName}.${columns["TmStamp"]} 
   `;
 

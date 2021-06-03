@@ -4,12 +4,16 @@ moment.locale("fr");
 const DATE_FORMAT = "YYYY-MM-DD";
 const DATETIME_FORMAT = `${DATE_FORMAT} HH:mm:ss`;
 
+const getEstMoment = (momentValue) => {
+  return moment.utc(momentValue).utcOffset(-5)
+}
+
 module.exports = {
-  currentDate: () => moment(),
+  currentDate: () => getEstMoment(),
   convertToDateString: (momentValue) => {
-    return moment.utc(momentValue).local().format(DATE_FORMAT);
+    return getEstMoment(momentValue).format(DATE_FORMAT);
   },
   convertToDateTimeString: (momentValue) => {
-    return moment.utc(momentValue).local().format(DATETIME_FORMAT);
+    return getEstMoment(momentValue).format(DATETIME_FORMAT);
   },
 };
