@@ -43,7 +43,7 @@ const getReferenceStationQuery = `
 `;
 
 const getAllClients = `
-  SELECT * FROM clients WHERE id = 12;
+  SELECT * FROM clients;
 `;
 
 const getClientStations = `
@@ -94,9 +94,10 @@ const startAlertsCron = async () => {
           console.debug(
             `ALERTS - ${client.name} - ${station.name} - starting...`
           );
-          const { stationTableMeta } = await getStationTableMeta(
+          const stationMetaData = await getStationTableMeta(
             station.stationId
           );
+          const stationTableMeta = stationMetaData && stationMetaData.stationTableMeta
 
           if (!stationTableMeta) {
             console.warn(
