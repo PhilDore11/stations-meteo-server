@@ -91,64 +91,71 @@ const startAlertsCron = async () => {
 
         const clientRainAlerts = {};
         for (const station of stationsResults) {
-          console.debug(
-            `ALERTS - ${client.name} - ${station.name} - starting...`
-          );
-          const stationMetaData = await getStationTableMeta(
-            station.stationId
-          );
-          const stationTableMeta = stationMetaData && stationMetaData.stationTableMeta
-
-          if (!stationTableMeta) {
-            console.warn(
-              `Could not find table for station (${station.id}: ${station.name})`
+          try {
+            console.debug(
+              `ALERTS - ${client.name} - ${station.name} - starting...`
             );
-            return;
-          }
+            const stationMetaData = await getStationTableMeta(
+              station.stationId
+            );
+            const stationTableMeta =
+              stationMetaData && stationMetaData.stationTableMeta;
 
-          // Station Coefficients
-          let stationCoefficientsResults = await db.connection.query(
-            getStationCoefficients,
-            [station.stationId]
-          );
+            if (!stationTableMeta) {
+              console.warn(
+                `Could not find table for station (${station.id}: ${station.name})`
+              );
+              continue;
+            }
 
-          console.debug(
-            `ALERTS - ${client.name} - ${station.name} - Found ${stationCoefficientsResults.length} coefficients ...`
-          );
-
-          // Station Data
-          let stationDataResults = await db.connection.query(
-            getStationDataForAlertsQuery(stationTableMeta.dbTableName),
-            [station.stationId]
-          );
-
-          console.debug(
-            `ALERTS - ${client.name} - ${station.name} - Found ${stationDataResults.length} results ...`
-          );
-
-          stationDataResults = stationDataResults.map((result) => ({
-            ...result,
-            coefficient: stationCoefficientsResults.find(
-              (stationCoefficient) =>
-                stationCoefficient.dateModified <= result.stationDate
-            )?.coefficient,
-          }));
-
-          if (station.hasRain) {
-            clientRainAlerts[station.name] = {
-              id: station.id,
-              stationDataResults,
-              ...(await checkRainAlerts(stationDataResults, station)),
-            };
+            // Station Coefficients
+            let stationCoefficientsResults = await db.connection.query(
+              getStationCoefficients,
+              [station.stationId]
+            );
 
             console.debug(
-              `ALERTS - ${client.name} - ${
-                station.name
-              } - Rain alerts ${JSON.stringify(
-                clientRainAlerts[station.name].alertThresholds,
-                null,
-                2
-              )} ...`
+              `ALERTS - ${client.name} - ${station.name} - Found ${stationCoefficientsResults.length} coefficients ...`
+            );
+
+            // Station Data
+            let stationDataResults = await db.connection.query(
+              getStationDataForAlertsQuery(stationTableMeta.dbTableName),
+              [station.stationId]
+            );
+
+            console.debug(
+              `ALERTS - ${client.name} - ${station.name} - Found ${stationDataResults.length} results ...`
+            );
+
+            stationDataResults = stationDataResults.map((result) => ({
+              ...result,
+              coefficient: stationCoefficientsResults.find(
+                (stationCoefficient) =>
+                  stationCoefficient.dateModified <= result.stationDate
+              )?.coefficient,
+            }));
+
+            if (station.hasRain) {
+              clientRainAlerts[station.name] = {
+                id: station.id,
+                stationDataResults,
+                ...(await checkRainAlerts(stationDataResults, station)),
+              };
+
+              console.debug(
+                `ALERTS - ${client.name} - ${
+                  station.name
+                } - Rain alerts ${JSON.stringify(
+                  clientRainAlerts[station.name].alertThresholds,
+                  null,
+                  2
+                )} ...`
+              );
+            }
+          } catch (e) {
+            console.warn(
+              `Error generating alerts for station (${station.id}: ${station.name})`
             );
           }
         }
