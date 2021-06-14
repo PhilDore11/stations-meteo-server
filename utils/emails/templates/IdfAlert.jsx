@@ -135,7 +135,7 @@ class IdfAlert extends React.PureComponent {
                       maxAlertThreshold,
                       averages,
                       standardDeviations
-                    )?.toFixed(2) || "-"
+                    )?.toFixed(1) || "-"
                   } ans (${formatIncrementText(maxThreshold)})`}
                 </Typography>
                 <Typography variant="body2" align="center">

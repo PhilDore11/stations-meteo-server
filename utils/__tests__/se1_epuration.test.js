@@ -109,7 +109,7 @@ describe("Saint-Eustache Epuration Alerts", () => {
           (key) =>
             `${key}:${parseFloat(alertThresholds[key].data).toFixed(
               2
-            )}:${parseFloat(alertThresholds[key].threshold).toFixed(2)}`
+            )}:${parseFloat(alertThresholds[key].threshold).toFixed(1)}`
         );
         expect(actualResults).toEqual(expectedResult);
       }

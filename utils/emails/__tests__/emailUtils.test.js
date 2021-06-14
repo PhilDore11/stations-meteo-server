@@ -50,6 +50,7 @@ describe("Email Utils", () => {
   describe("sendRainEmail", () => {
     test("should send an email", async () => {
       await emailUtils.sendRainEmail(
+        { name: "Test Client" },
         [{ hasRain: true, email: "philippe.dore.11@gmail.com" }],
         testClientRainAlerts
       );
