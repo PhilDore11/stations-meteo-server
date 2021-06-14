@@ -67,7 +67,7 @@ const getStationCoefficients = `
 `;
 
 const getLastStationAlert = `
-  SELECT * FROM stationAlerts WHERE stationId = ? AND TmStamp > NOW() - INTERVAL 6 HOUR ORDER BY TmStamp DESC LIMIT 1 
+  SELECT * FROM stationAlerts WHERE stationId = ? AND TmStamp > NOW() - INTERVAL 24 HOUR ORDER BY TmStamp DESC LIMIT 1 
 `;
 
 const insertStationAlert = `
