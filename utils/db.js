@@ -8,6 +8,8 @@ const connection = mysql.createConnection({
   user: "jfsa",
   password: "R5cA!nr6CYT1",
   database: "stationsMeteoDB",
+  timezone: "est",
+  dateStrings: true,
 });
 connection.query = util.promisify(connection.query);
 

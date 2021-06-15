@@ -43,7 +43,7 @@ const getQuery = (view, tableName, columns) => `
   FROM   ${tableName} 
          LEFT JOIN stationData 
               ON stationId = ? AND 
-              ${tableName}.${columns["TmStamp"]} = stationData.RecNum AND 
+              ${tableName}.${columns["RecNum"]} = stationData.RecNum AND 
               ${tableName}.${columns["TmStamp"]} = stationData.TmStamp
   WHERE  ${tableName}.${columns["TmStamp"]} BETWEEN ? AND ? 
   GROUP BY ${getGroupByClauses(view, tableName, columns)}
@@ -51,7 +51,7 @@ const getQuery = (view, tableName, columns) => `
 
 const getLatestQuery = (tableName, columns) => `
   SELECT ${columns["TmStamp"]}      AS date,
-         ${columns["TmStamp"]}      AS RecNum,
+         ${columns["RecNum"]}      AS RecNum,
          ${columns["Pluie_mm_Tot"]} AS intensity, 
          ${columns["batt_volt"]}    AS battery
   FROM ${tableName} 
@@ -98,10 +98,10 @@ const insertMissingResultsQuery = (tableName, columns) => `
 
 const insertValidatedResultsQuery = `
   INSERT INTO stationData (stationId, RecNum, TmStamp, Pluie_mm_Validee, Coefficient) 
-      VALUES ? 
+      VALUES ? AS newStationData
   ON DUPLICATE KEY UPDATE 
-      Pluie_mm_Validee = VALUES (Pluie_mm_Validee),
-      Coefficient = VALUES (Coefficient)
+      Pluie_mm_Validee = newStationData.Pluie_mm_Validee,
+      Coefficient = newStationData.Coefficient
 `;
 
 const getColumnsFromMeta = (stationColumnMeta) => {
@@ -218,7 +218,7 @@ module.exports = {
       const jsonData = stationDataResults.map((result) => ({
         stationId,
         RecNum: result.RecNum,
-        TmStamp: dateUtils.convertToDateTimeString(result.TmStamp),
+        TmStamp: result.TmStamp,
         Pluie_mm_Tot: isNumber(result.Pluie_mm_Tot)
           ? result.Pluie_mm_Tot.toString()
           : "",

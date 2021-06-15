@@ -19,13 +19,12 @@ const {
 } = require("../utils/alertUtils");
 const { sendRainEmail } = require("../utils/emails/emailUtils.jsx");
 const { logger } = require("../utils/logger");
-const { convertToDateString } = require("../utils/dateUtils");
 
 const getStationDataForAlertsQuery = (tableName) => `
   SELECT ${tableName}.TmStamp         AS stationDate, 
          Pluie_mm_Tot                 AS intensity
   FROM   ${tableName}
-  WHERE  ${tableName}.TmStamp >= NOW() - INTERVAL 24 HOUR
+  WHERE  ${tableName}.TmStamp >= SUBTIME(NOW(),'05:00') - INTERVAL 24 HOUR
   ORDER BY ${tableName}.TmStamp DESC
 `;
 
@@ -67,7 +66,7 @@ const getStationCoefficients = `
 `;
 
 const getLastStationAlert = `
-  SELECT * FROM stationAlerts WHERE stationId = ? AND TmStamp > NOW() - INTERVAL 24 HOUR ORDER BY TmStamp DESC LIMIT 1 
+  SELECT * FROM stationAlerts WHERE stationId = ? AND TmStamp > SUBTIME(NOW(),'05:00') - INTERVAL 24 HOUR ORDER BY TmStamp DESC LIMIT 1 
 `;
 
 const insertStationAlert = `

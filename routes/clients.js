@@ -22,16 +22,14 @@ const getClientsQuery = getAllClientsQuery.concat(`
 `);
 
 const getStationsQuery = ` 
-  SELECT stations.*, 
-         coefficient
-  FROM   stations
-        LEFT JOIN (SELECT *
-              FROM   stationCoefficients
-              GROUP  BY stationId
-              ORDER  BY dateModified DESC
-              LIMIT  1) AS stationCoefficient
-          ON stations.stationId = stationCoefficient.stationId
-  WHERE  clientid = ?;`;
+  SELECT  stations.*, 
+          coefficient
+  FROM    stations
+          LEFT JOIN (SELECT *
+              FROM   stationCoefficients) AS stationCoefficient
+            ON stations.stationId = stationCoefficient.stationId
+  WHERE  clientid = ?
+  ORDER BY dateModified DESC LIMIT 1`;
 
 module.exports = {
   post: async (req, res, next) => {

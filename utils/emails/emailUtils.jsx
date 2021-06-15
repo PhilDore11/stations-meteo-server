@@ -13,7 +13,7 @@ const {
 const { isEmpty } = require("lodash");
 
 const nodemailer = require("nodemailer");
-const { currentDate, convertToDateTimeString } = require("../dateUtils");
+const { convertToDateTimeString } = require("../dateUtils");
 
 const { theme } = require("./templates/theme");
 const { IdfAlert } = require("./templates/IdfAlert");
