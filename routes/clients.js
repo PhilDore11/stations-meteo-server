@@ -26,10 +26,10 @@ const getStationsQuery = `
           coefficient
   FROM    stations
           LEFT JOIN (SELECT *
-              FROM   stationCoefficients) AS stationCoefficient
+              FROM   stationCoefficients GROUP BY stationId) AS stationCoefficient
             ON stations.stationId = stationCoefficient.stationId
   WHERE  clientid = ?
-  ORDER BY dateModified DESC LIMIT 1`;
+  ORDER BY dateModified DESC`;
 
 module.exports = {
   post: async (req, res, next) => {
