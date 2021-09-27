@@ -22,6 +22,8 @@ const testClientRainAlerts = {
       720: { data: 4.9336, interval: 10, threshold: 4.8668 },
       1440: { data: 2.4668, interval: 5, threshold: 2.4438 },
     },
+    averages: [8.3, 11.8, 13.9, 16.9, 20.8, 26.6, 37.8, 45.566, 51.944],
+    standardDeviations: [2.9, 3.1, 3.5, 4.6, 6.7, 9.8, 11.9, 16.217, 16.58],
   },
   "Station de filtration": {
     incrementalData: {
@@ -43,6 +45,8 @@ const testClientRainAlerts = {
       720: { data: 4.7595, interval: 5, threshold: 4.2789 },
       1440: { data: 2.3798, interval: 2, threshold: 1.9725 },
     },
+    averages: [8.3, 11.8, 13.9, 16.9, 20.8, 26.6, 37.8, 45.566, 51.944],
+    standardDeviations: [2.9, 3.1, 3.5, 4.6, 6.7, 9.8, 11.9, 16.217, 16.58],
   },
 };
 

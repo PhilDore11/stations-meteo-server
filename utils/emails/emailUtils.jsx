@@ -85,7 +85,7 @@ module.exports = {
           to: clientEmails,
           subject: `${
             client.name
-          } - Alerte de pluie - ${convertToDateTimeString(alertDateTime)}`,
+          } - Alerte de pluie - ${alertDateTime}`,
           html: renderFullPage(html, css),
           text:
             "Une précipitation importante a été enregistrée lors des derniers 24h",
