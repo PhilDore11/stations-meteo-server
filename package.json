@@ -24,7 +24,7 @@
     "json-2-csv": "^3.7.12",
     "lodash": "^4.17.21",
     "moment": "^2.22.2",
-    "moment-timezone": "^0.5.32",
+    "moment-timezone": "^0.5.35",
     "mysql": "^2.16.0",
     "node-cron": "^2.0.3",
     "nodemailer": "^6.4.16",
